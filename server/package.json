@@ -1,0 +1,27 @@
+{
+    "name": "social-media-webapp-final-year-project",
+    "version": "1.0.0",
+    "description": "A social media web application for college students",
+    "license": "ISC",
+    "author": "",
+    "type": "module",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "node index.js",
+        "dev": "nodemon index.js",
+        "db:push": "npx drizzle-kit push"
+    },
+    "dependencies": {
+        "@neondatabase/serverless": "^1.0.2",
+        "better-auth": "^1.4.10",
+        "cors": "^2.8.5",
+        "dotenv": "^17.2.3",
+        "drizzle-orm": "^0.45.1",
+        "express": "^5.2.1",
+        "nodemon": "^3.1.11"
+    },
+    "devDependencies": {
+        "drizzle-kit": "^0.31.8"
+    }
+}

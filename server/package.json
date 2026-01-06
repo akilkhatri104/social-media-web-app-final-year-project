@@ -1,27 +1,36 @@
 {
-    "name": "social-media-webapp-final-year-project",
-    "version": "1.0.0",
-    "description": "A social media web application for college students",
-    "license": "ISC",
-    "author": "",
-    "type": "module",
-    "main": "index.js",
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "start": "node index.js",
-        "dev": "nodemon index.js",
-        "db:push": "npx drizzle-kit push"
-    },
-    "dependencies": {
-        "@neondatabase/serverless": "^1.0.2",
-        "better-auth": "^1.4.10",
-        "cors": "^2.8.5",
-        "dotenv": "^17.2.3",
-        "drizzle-orm": "^0.45.1",
-        "express": "^5.2.1",
-        "nodemon": "^3.1.11"
-    },
-    "devDependencies": {
-        "drizzle-kit": "^0.31.8"
-    }
+  "name": "social-media-webapp-final-year-project",
+  "version": "1.0.0",
+  "description": "A social media web application for college students",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "node --watch --import tsx/esm src/index.ts",
+    "lint": "eslint 'src/**/*.ts'",
+    "db:push": "npx drizzle-kit push"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "better-auth": "^1.4.10",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.45.1",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.3",
+    "drizzle-kit": "^0.31.8",
+    "eslint": "^9.39.2",
+    "nodemon": "^3.1.11",
+    "prettier": "^3.7.4",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
 }

@@ -1,4 +1,6 @@
+import { APIError } from 'better-auth';
 import type { Request, Response, NextFunction } from 'express';
+import { stat } from 'node:fs';
 
 export interface AppError extends Error {
   status?: number;
@@ -6,6 +8,7 @@ export interface AppError extends Error {
 
 export class AppError extends Error {
   status?: number;
+  statusCode?: number;
 
   constructor(message: string, status = 500) {
     super(message);
@@ -17,14 +20,16 @@ export class AppError extends Error {
 }
 
 export const errorHandler = (
-  err: AppError,
+  err: AppError | APIError,
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   console.error('ERROR :: ', err);
-  res.status(err.status || 500).json({
+  const status =
+    err instanceof APIError ? err.statusCode : (err.status as number);
+  res.status(status || 500).json({
     message: err.message || 'Internal server errror',
-    status: err.status || 500,
+    status: status || 500,
   });
 };

@@ -9,11 +9,13 @@ import { errorHandler } from './middlewares/errorHandler.js';
 const app = express();
 
 app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.post('/test', (req, res) => res.json(req.body));
 
 // mount BetterAuth
-app.all('api/auth/*splat', toNodeHandler(auth));
-
-app.use(express.json());
+app.all('/api/auth/*splat', toNodeHandler(auth));
 
 app.get('/', (req, res) => {
   res.send('Hello World TSX!');

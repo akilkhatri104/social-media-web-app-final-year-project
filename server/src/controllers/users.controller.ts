@@ -37,22 +37,29 @@ export async function signin(req: Request, res: Response) {
 }
 
 export async function signup(req: Request, res: Response) {
+  console.log('BODY ::: ', req.body);
+  if (!req.body) {
+    console.error('Request body is missing');
+    throw new AppError('Request body is missing', 400);
+  }
   try {
     const { email, password, name, image } = req.body;
     if (!email || !password || !name) {
+      console.error('Email, Password and Name are required');
       throw new Error('Email, Password and Name are required');
     }
+    console.log('Request body is valid');
     const response = await auth.api.signUpEmail({
       body: { email, password, name, image },
-      asResponse: true,
     });
 
-    return response;
+    console.log('Response from sign up email:', response);
+    return res.json(response);
   } catch (error) {
     if (error instanceof APIError) {
-      console.error(error.message, error.status);
+      console.error('Error from sign up email:', error.message, error.status);
     } else if (error instanceof Error) {
-      console.error(error.message);
+      console.error('Error from sign up email:', error.message);
     }
     throw error;
   }

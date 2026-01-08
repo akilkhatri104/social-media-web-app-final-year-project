@@ -11,7 +11,9 @@ export const post = p.pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     parentPostId: p.integer('parent_post_id'),
     content: p.text('content').notNull(),
-    visibility: p.text('visibility', { enum: ['public', 'followers'] }),
+    visibility: p
+      .text('visibility', { enum: ['public', 'followers'] })
+      .default('public'),
     createdAt: p.timestamp('created_at').defaultNow().notNull(),
     updatedAt: p
       .timestamp('updated_at')

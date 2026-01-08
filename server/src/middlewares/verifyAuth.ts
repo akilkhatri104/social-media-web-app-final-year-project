@@ -1,7 +1,13 @@
 import type { NextFunction, Response, Request } from 'express';
 import { auth } from '../lib/auth.ts';
-import { APIError } from 'better-auth';
+import type { Session, User } from 'better-auth';
 import { AppError } from './errorHandler.ts';
+
+declare module 'express-serve-static-core' {
+  export interface Request {
+    session: { session: Session; user: User } | null;
+  }
+}
 
 export async function verifyAuth(
   req: Request,
@@ -19,7 +25,7 @@ export async function verifyAuth(
         401,
       );
     }
-
+    req.session = session;
     next();
   } catch (error) {
     console.error('verifyAuth :: ', error);

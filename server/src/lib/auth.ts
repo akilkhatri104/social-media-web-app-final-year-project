@@ -11,4 +11,5 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  advanced: { disableOriginCheck: true },
 });

@@ -23,11 +23,17 @@ export async function signin(req: Request, res: Response) {
       throw new Error('Email and Password is required', {});
     }
     const response = await auth.api.signInEmail({
+      returnHeaders: true,
       body: { email, password },
-      asResponse: true,
     });
 
-    return response;
+    const setCookies = response.headers.getSetCookie();
+    if (setCookies.length) {
+      console.log('COOKIES :: ', setCookies);
+      res.setHeader('Set-Cookie', setCookies);
+    }
+
+    return res.json(response);
   } catch (error) {
     if (error instanceof APIError) {
       console.error(error.message, error.status);
@@ -50,11 +56,42 @@ export async function signup(req: Request, res: Response) {
     }
     console.log('Request body is valid');
     const response = await auth.api.signUpEmail({
+      returnHeaders: true,
       body: { email, password, name, image },
     });
 
+    const setCookies = response.headers.getSetCookie();
+    if (setCookies.length) {
+      console.log('COOKIES :: ', setCookies);
+      res.setHeader('Set-Cookie', setCookies);
+    }
+
     console.log('Response from sign up email:', response);
     return res.json(response);
+  } catch (error) {
+    if (error instanceof APIError) {
+      console.error('Error from sign up email:', error.message, error.status);
+    } else if (error instanceof Error) {
+      console.error('Error from sign up email:', error.message);
+    }
+    throw error;
+  }
+}
+
+export async function logout(req: Request, res: Response) {
+  try {
+    const response = await auth.api.signOut({
+      headers: req.header,
+      returnHeaders: true,
+    });
+    const setCookies = response.headers.getSetCookie();
+    if (setCookies.length) {
+      console.log('COOKIES :: ', setCookies);
+      res.setHeader('Set-Cookie', setCookies);
+    }
+    return res.status(200).json({
+      message: 'Logged out successfully',
+    });
   } catch (error) {
     if (error instanceof APIError) {
       console.error('Error from sign up email:', error.message, error.status);

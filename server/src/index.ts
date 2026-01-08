@@ -4,6 +4,7 @@ import cors from 'cors';
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
 import { auth } from './lib/auth.js';
 import userRouter from './routers/users.router.js';
+import postRouter from './routers/post.router.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
@@ -26,6 +27,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/user', userRouter);
+app.use('/api/post', postRouter);
 
 app.use(errorHandler);
 

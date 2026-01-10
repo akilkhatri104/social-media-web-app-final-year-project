@@ -1,6 +1,6 @@
 import { APIError } from 'better-auth';
 import type { Request, Response, NextFunction } from 'express';
-import { stat } from 'node:fs';
+import { APIResponse } from '../lib/apiResponse.ts';
 
 export interface AppError extends Error {
   status?: number;
@@ -28,8 +28,5 @@ export const errorHandler = (
   console.error('ERROR :: ', err);
   const status =
     err instanceof APIError ? err.statusCode : (err.status as number);
-  res.status(status || 500).json({
-    message: err.message || 'Internal server errror',
-    status: status || 500,
-  });
+  return res.status(status || 500).json(new APIResponse(err.message, status));
 };

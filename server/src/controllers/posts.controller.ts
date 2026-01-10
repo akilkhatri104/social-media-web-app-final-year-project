@@ -4,6 +4,8 @@ import { AppError } from '../middlewares/errorHandler.ts';
 import { post } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
 import { eq } from 'drizzle-orm';
+import { APIResponse } from '../lib/apiResponse.ts';
+
 export async function createPost(req: Request, res: Response) {
   try {
     if (!req.session) {
@@ -42,10 +44,9 @@ export async function createPost(req: Request, res: Response) {
       throw new AppError('Error while creating post', 500);
     }
 
-    return res.status(500).json({
-      message: 'Post created successfully',
-      postId: createdPost.postId,
-    });
+    return res
+      .status(200)
+      .json(new APIResponse('Post created successfully!', 201, createdPost));
   } catch (error) {
     console.error('createPost :: ', error);
     throw error;

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { verifyAuth } from '../middlewares/verifyAuth.ts';
-import { createPost } from '../controllers/post.controller.ts';
+import { createPost } from '../controllers/posts.controller.ts';
 
 const router = Router();
 const protectedRouter = Router();

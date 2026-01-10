@@ -2,7 +2,8 @@ import { APIError } from 'better-auth';
 import { fromNodeHeaders } from 'better-auth/node';
 import { auth } from '../lib/auth.js';
 import { AppError } from '../middlewares/errorHandler.js';
-import type { NextFunction, Request, Response } from 'express';
+import { type Request, type Response } from 'express';
+import { APIResponse } from '../lib/apiResponse.ts';
 
 export async function me(req: Request, res: Response) {
   const session = await auth.api.getSession({
@@ -13,14 +14,16 @@ export async function me(req: Request, res: Response) {
     throw new AppError('User not logged in', 400);
   }
 
-  return res.json(session);
+  return res.json(
+    new APIResponse('User session fetched successfully', 200, session),
+  );
 }
 
 export async function signin(req: Request, res: Response) {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      throw new Error('Email and Password is required', {});
+      throw new AppError('Email and Password is required', 400);
     }
     const response = await auth.api.signInEmail({
       returnHeaders: true,
@@ -29,15 +32,16 @@ export async function signin(req: Request, res: Response) {
 
     const setCookies = response.headers.getSetCookie();
     if (setCookies.length) {
-      console.log('COOKIES :: ', setCookies);
       res.setHeader('Set-Cookie', setCookies);
     }
 
-    return res.json(response);
+    return res
+      .status(200)
+      .json(
+        new APIResponse('User signed in successfully', 200, response.response),
+      );
   } catch (error) {
-    if (error instanceof APIError) {
-      console.error(error.message, error.status);
-    }
+    console.error('signin :: ', error);
     throw error;
   }
 }
@@ -52,7 +56,7 @@ export async function signup(req: Request, res: Response) {
     const { email, password, name, image } = req.body;
     if (!email || !password || !name) {
       console.error('Email, Password and Name are required');
-      throw new Error('Email, Password and Name are required');
+      throw new AppError('Email, Password and Name are required', 400);
     }
     console.log('Request body is valid');
     const response = await auth.api.signUpEmail({
@@ -67,13 +71,13 @@ export async function signup(req: Request, res: Response) {
     }
 
     console.log('Response from sign up email:', response);
-    return res.json(response);
+    return res
+      .status(201)
+      .json(
+        new APIResponse('User signed up successfully', 201, response.response),
+      );
   } catch (error) {
-    if (error instanceof APIError) {
-      console.error('Error from sign up email:', error.message, error.status);
-    } else if (error instanceof Error) {
-      console.error('Error from sign up email:', error.message);
-    }
+    console.error('signup :: ', error);
     throw error;
   }
 }
@@ -89,15 +93,11 @@ export async function logout(req: Request, res: Response) {
       console.log('COOKIES :: ', setCookies);
       res.setHeader('Set-Cookie', setCookies);
     }
-    return res.status(200).json({
-      message: 'Logged out successfully',
-    });
+    return res
+      .status(200)
+      .json(new APIResponse('User logged out successfully', 200));
   } catch (error) {
-    if (error instanceof APIError) {
-      console.error('Error from sign up email:', error.message, error.status);
-    } else if (error instanceof Error) {
-      console.error('Error from sign up email:', error.message);
-    }
+    console.error('logout :: ', logout);
     throw error;
   }
 }

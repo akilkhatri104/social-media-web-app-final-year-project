@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { auth } from '../lib/auth.ts';
+import { request, response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
 import { post } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
@@ -49,6 +49,35 @@ export async function createPost(req: Request, res: Response) {
       .json(new APIResponse('Post created successfully!', 201, createdPost));
   } catch (error) {
     console.error('createPost :: ', error);
+    throw error;
+  }
+}
+
+export async function getPostByID(req: Request, res: Response) {
+  try {
+    if (!req.params || !req.params['id']) {
+      throw new AppError('No post ID provided', 400);
+    }
+
+    const id = Number(req.params['id']);
+    if (!id) {
+      throw new AppError('Invalid post ID provided', 400);
+    }
+    const [fetchedPost] = await db
+      .select()
+      .from(post)
+      .where(eq(post.id, id))
+      .limit(1);
+
+    if (!fetchedPost) {
+      throw new AppError('No post found with provided ID', 404);
+    }
+    req;
+    return res
+      .status(200)
+      .json(new APIResponse('Post fetched successfully', 200, fetchedPost));
+  } catch (error) {
+    console.error('getPostByID :: ', error);
     throw error;
   }
 }

@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import { verifyAuth } from '../middlewares/verifyAuth.ts';
-import { createPost, getPostByID } from '../controllers/posts.controller.ts';
+import {
+  createPost,
+  deletePostByID,
+  getPostByID,
+} from '../controllers/posts.controller.ts';
 
 const router = Router();
 const protectedRouter = Router();
@@ -10,6 +14,7 @@ protectedRouter.use(verifyAuth);
 
 //Protected Routes
 protectedRouter.post('/', createPost);
+protectedRouter.delete('/:id', deletePostByID);
 
 //Public Routes
 publicRouter.get('/:id', getPostByID);

@@ -81,3 +81,51 @@ export async function getPostByID(req: Request, res: Response) {
     throw error;
   }
 }
+
+export async function deletePostByID(req: Request, res: Response) {
+  try {
+    if (!req.session) {
+      throw new AppError('User not logged in', 401);
+    }
+    if (!req.params || !req.params['id']) {
+      throw new AppError('No post ID provided', 400);
+    }
+
+    const id = Number(req.params['id']);
+    if (!id) {
+      throw new AppError('Invalid post ID provided', 400);
+    }
+    const [fetchedPost] = await db
+      .select()
+      .from(post)
+      .where(eq(post.id, id))
+      .limit(1);
+
+    if (!fetchedPost) {
+      throw new AppError('No post found with provided ID', 404);
+    }
+
+    if (fetchedPost.userId !== req.session.user.id) {
+      throw new AppError(
+        'Post must belong to the logged in user to delete',
+        401,
+      );
+    }
+
+    const deletedPost = await db
+      .delete(post)
+      .where(eq(post.id, id))
+      .returning({ deletedId: post.id });
+
+    if (!deletedPost.length || !deletedPost[0]?.deletedId) {
+      throw new AppError('Error while deleting post', 500);
+    }
+
+    return res
+      .status(200)
+      .json(new APIResponse('Post deleted successfully', 200, deletedPost[0]));
+  } catch (error) {
+    console.error('getPostByID :: ', error);
+    throw error;
+  }
+}

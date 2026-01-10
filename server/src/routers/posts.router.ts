@@ -4,6 +4,7 @@ import {
   createPost,
   deletePostByID,
   getPostByID,
+  getPostFromUser,
 } from '../controllers/posts.controller.ts';
 
 const router = Router();
@@ -18,6 +19,7 @@ protectedRouter.delete('/:id', deletePostByID);
 
 //Public Routes
 publicRouter.get('/:id', getPostByID);
+publicRouter.get('/users/:id', getPostFromUser);
 
 router.use(publicRouter);
 router.use(protectedRouter);

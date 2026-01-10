@@ -27,6 +27,10 @@ export const errorHandler = (
 ) => {
   console.error('ERROR :: ', err);
   const status =
-    err instanceof APIError ? err.statusCode : (err.status as number);
+    err instanceof AppError
+      ? err.status
+      : err instanceof APIError
+        ? err.statusCode
+        : 500;
   return res.status(status || 500).json(new APIResponse(err.message, status));
 };

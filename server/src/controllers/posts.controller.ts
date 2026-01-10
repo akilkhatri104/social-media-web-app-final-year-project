@@ -3,7 +3,7 @@ import { request, response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
 import { post } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
 
 export async function createPost(req: Request, res: Response) {
@@ -72,12 +72,33 @@ export async function getPostByID(req: Request, res: Response) {
     if (!fetchedPost) {
       throw new AppError('No post found with provided ID', 404);
     }
-    req;
+
     return res
       .status(200)
       .json(new APIResponse('Post fetched successfully', 200, fetchedPost));
   } catch (error) {
     console.error('getPostByID :: ', error);
+    throw error;
+  }
+}
+
+export async function getPostFromUser(req: Request, res: Response) {
+  try {
+    if (!req.params || !req.params['id']) {
+      throw new AppError('No user ID provided', 400);
+    }
+
+    const id = req.params['id'];
+    const fetchedPosts = await db
+      .select()
+      .from(post)
+      .where(eq(post.userId, id));
+
+    return res
+      .status(200)
+      .json(new APIResponse('Posts fetched successfully', 200, fetchedPosts));
+  } catch (error) {
+    console.error('getPostFromUser :: ', error);
     throw error;
   }
 }
@@ -112,18 +133,24 @@ export async function deletePostByID(req: Request, res: Response) {
       );
     }
 
-    const deletedPost = await db
+    const deletedPosts = await db
       .delete(post)
-      .where(eq(post.id, id))
+      .where(or(eq(post.id, id), eq(post.parentPostId, id)))
       .returning({ deletedId: post.id });
 
-    if (!deletedPost.length || !deletedPost[0]?.deletedId) {
-      throw new AppError('Error while deleting post', 500);
+    if (!deletedPosts.length) {
+      throw new AppError('Error while deleting post(s)', 500);
     }
 
     return res
       .status(200)
-      .json(new APIResponse('Post deleted successfully', 200, deletedPost[0]));
+      .json(
+        new APIResponse(
+          'Post (and its replies) deleted successfully',
+          200,
+          deletedPosts,
+        ),
+      );
   } catch (error) {
     console.error('getPostByID :: ', error);
     throw error;

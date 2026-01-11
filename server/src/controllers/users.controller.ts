@@ -6,29 +6,38 @@ import { type Request, type Response } from 'express';
 import { APIResponse } from '../lib/apiResponse.ts';
 
 export async function me(req: Request, res: Response) {
-  const session = await auth.api.getSession({
-    headers: fromNodeHeaders(req.headers),
-  });
-
-  if (!session) {
+  if (!req.session) {
     throw new AppError('User not logged in', 400);
   }
 
   return res.json(
-    new APIResponse('User session fetched successfully', 200, session),
+    new APIResponse('User session fetched successfully', 200, req.session),
   );
 }
 
 export async function signin(req: Request, res: Response) {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      throw new AppError('Email and Password is required', 400);
+    const { email, password, username } = req.body;
+    if (!email && !username) {
+      throw new AppError('Email or Username are required', 400);
     }
-    const response = await auth.api.signInEmail({
-      returnHeaders: true,
-      body: { email, password },
-    });
+
+    if (!password) {
+      throw new AppError('Password is required', 400);
+    }
+
+    let response = null;
+    if (username) {
+      response = await auth.api.signInUsername({
+        returnHeaders: true,
+        body: { username, password },
+      });
+    } else {
+      response = await auth.api.signInEmail({
+        returnHeaders: true,
+        body: { email, password },
+      });
+    }
 
     const setCookies = response.headers.getSetCookie();
     if (setCookies.length) {
@@ -53,15 +62,15 @@ export async function signup(req: Request, res: Response) {
     throw new AppError('Request body is missing', 400);
   }
   try {
-    const { email, password, name, image } = req.body;
-    if (!email || !password || !name) {
-      console.error('Email, Password and Name are required');
+    const { email, password, name, image, username } = req.body;
+    if (!email || !password || !name || !username) {
+      console.error('Email, Username, Password and Name are required');
       throw new AppError('Email, Password and Name are required', 400);
     }
     console.log('Request body is valid');
     const response = await auth.api.signUpEmail({
       returnHeaders: true,
-      body: { email, password, name, image },
+      body: { email, password, name, image, username },
     });
 
     const setCookies = response.headers.getSetCookie();
@@ -97,7 +106,38 @@ export async function logout(req: Request, res: Response) {
       .status(200)
       .json(new APIResponse('User logged out successfully', 200));
   } catch (error) {
-    console.error('logout :: ', logout);
+    console.error('logout :: ', error);
+    throw error;
+  }
+}
+
+export async function updateUser(req: Request, res: Response) {
+  try {
+    if (!req.session) {
+      throw new AppError('User needs to be logged in to update details', 400);
+    }
+    const { username, name, image } = req.body;
+
+    if (!username && !name && !image) {
+      throw new AppError('No updated details provided', 400);
+    }
+
+    const response = await auth.api.updateUser({
+      body: {
+        username,
+        name,
+        image,
+      },
+      headers: req.headers,
+    });
+
+    if (!response.status) {
+      throw new AppError('Error while updating details', 500);
+    }
+
+    return res.status(200).json(new APIResponse('User details updated', 200));
+  } catch (error) {
+    console.error('updateUser :: ', error);
     throw error;
   }
 }

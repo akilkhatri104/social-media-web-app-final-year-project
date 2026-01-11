@@ -13,7 +13,8 @@
     "lint": "eslint 'src/**/*.ts'",
     "db:push": "npx drizzle-kit push",
     "db:generate": "npx drizzle-kit generate",
-    "db:migrate": "npx drizzle-kit migrate"
+    "db:migrate": "npx drizzle-kit migrate",
+    "db:generate-auth": "npx @better-auth/cli@latest generate --output ./src/lib/auth-schema.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

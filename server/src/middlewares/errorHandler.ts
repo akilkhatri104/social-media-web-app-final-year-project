@@ -32,5 +32,11 @@ export const errorHandler = (
       : err instanceof APIError
         ? err.statusCode
         : 500;
-  return res.status(status || 500).json(new APIResponse(err.message, status));
+
+  const errorMsg =
+    err instanceof APIError ? (err.status as string) : err.message;
+
+  return res
+    .status(status || 500)
+    .json(new APIResponse(errorMsg || 'Internal server errror', status));
 };

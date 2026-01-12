@@ -2,7 +2,6 @@ import type { NextFunction, Response, Request } from 'express';
 import { auth } from '../lib/auth.ts';
 import type { Session, User } from 'better-auth';
 import { AppError } from './errorHandler.ts';
-import type { CloudinaryFile } from '../lib/cloudinary.ts';
 
 declare module 'express-serve-static-core' {
   export interface Request {
@@ -10,8 +9,7 @@ declare module 'express-serve-static-core' {
     file?: Express.Multer.File;
     files?:
       | Express.Multer.File[]
-      | { [fieldname: string]: Express.Multer.File[] }
-      | CloudinaryFile[];
+      | { [fieldname: string]: Express.Multer.File[] };
   }
 }
 

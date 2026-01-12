@@ -6,6 +6,7 @@ import {
   getPostByID,
   getPostFromUser,
 } from '../controllers/posts.controller.ts';
+import { upload } from '../lib/multer.ts';
 
 const router = Router();
 const protectedRouter = Router();
@@ -14,7 +15,7 @@ const publicRouter = Router();
 protectedRouter.use(verifyAuth);
 
 //Protected Routes
-protectedRouter.post('/', createPost);
+protectedRouter.post('/', upload.array('media', 10), createPost);
 protectedRouter.delete('/:id', deletePostByID);
 
 //Public Routes

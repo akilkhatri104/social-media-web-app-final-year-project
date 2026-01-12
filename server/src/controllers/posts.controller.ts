@@ -1,10 +1,11 @@
 import type { Request, Response } from 'express';
 import { request, response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
-import { post } from '../lib/db/schema.ts';
+import { media, post } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
 import { eq, or } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
+import { uploadToCloudinary } from '../lib/cloudinary.ts';
 
 export async function createPost(req: Request, res: Response) {
   try {
@@ -44,6 +45,23 @@ export async function createPost(req: Request, res: Response) {
       throw new AppError('Error while creating post', 500);
     }
 
+    // handle media
+    if (Array.isArray(req.files) && req.files.length > 0) {
+      const uploads = req.files.map((file) => uploadToCloudinary(file.buffer));
+
+      const uploadResults = await Promise.all(uploads);
+
+      const queries = uploadResults.map((res) =>
+        db.insert(media).values({
+          url: res.secure_url,
+          thumbnailUrl: res.secure_url,
+          type: res.resource_type,
+          postId: createdPost.postId,
+        }),
+      );
+
+      const insertResults = await Promise.all(queries);
+    }
     return res
       .status(200)
       .json(new APIResponse('Post created successfully!', 201, createdPost));

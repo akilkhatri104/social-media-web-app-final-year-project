@@ -48,7 +48,7 @@ export const like = p.pgTable('like', {
 
 export const media = p.pgTable('media', {
   id: p.serial('id').primaryKey(),
-  type: p.text('type', { enum: ['image', 'video'] }),
+  type: p.text('type', { enum: ['auto', 'image', 'video', 'raw'] }),
   url: p.text('url').notNull(),
   thumbnailUrl: p.text('thumbnail_url'),
   postId: p

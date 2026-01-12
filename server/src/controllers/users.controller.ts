@@ -1,9 +1,8 @@
-import { APIError } from 'better-auth';
-import { fromNodeHeaders } from 'better-auth/node';
 import { auth } from '../lib/auth.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { type Request, type Response } from 'express';
 import { APIResponse } from '../lib/apiResponse.ts';
+import { deleteFromCloudinary, uploadToCloudinary } from '../lib/cloudinary.ts';
 
 export async function me(req: Request, res: Response) {
   if (!req.session) {
@@ -68,9 +67,22 @@ export async function signup(req: Request, res: Response) {
       throw new AppError('Email, Password and Name are required', 400);
     }
     console.log('Request body is valid');
+
+    if (req.file && !req.file.mimetype.startsWith('image/')) {
+      throw new AppError('Profile picture must be an image');
+    }
+    let imgUrl;
+    if (req.file && req.file.mimetype.startsWith('image/')) {
+      const result = await uploadToCloudinary(req.file.buffer);
+      if (!result) {
+        throw new AppError('Error while uploading profile image');
+      }
+      imgUrl = result.secure_url;
+    }
+
     const response = await auth.api.signUpEmail({
       returnHeaders: true,
-      body: { email, password, name, image, username },
+      body: { email, password, name, image: imgUrl, username },
     });
 
     const setCookies = response.headers.getSetCookie();
@@ -116,17 +128,38 @@ export async function updateUser(req: Request, res: Response) {
     if (!req.session) {
       throw new AppError('User needs to be logged in to update details', 400);
     }
-    const { username, name, image } = req.body;
 
-    if (!username && !name && !image) {
+    if (!req.body) {
+      throw new AppError('Request body is empty', 400);
+    }
+
+    const { username, name } = req.body;
+
+    if (!username && !name && !req.file) {
       throw new AppError('No updated details provided', 400);
+    }
+
+    if (req.file && !req.file.mimetype.startsWith('image/')) {
+      throw new AppError('Profile picture must be an image');
+    }
+    let imgUrl = null;
+    if (req.file && req.file.mimetype.startsWith('image/')) {
+      const result = await uploadToCloudinary(req.file.buffer);
+      if (!result) {
+        throw new AppError('Error while uploading new image');
+      }
+      imgUrl = result.secure_url;
+
+      if (result.public_id && req.session.user.image) {
+        const deleteRes = await deleteFromCloudinary(req.session.user.image);
+      }
     }
 
     const response = await auth.api.updateUser({
       body: {
         username,
         name,
-        image,
+        image: imgUrl,
       },
       headers: req.headers,
     });

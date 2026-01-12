@@ -26,6 +26,10 @@ export const errorHandler = (
   next: NextFunction,
 ) => {
   console.error('ERROR :: ', err);
+
+  if (err instanceof APIError) {
+    console.log(err.message);
+  }
   const status =
     err instanceof AppError
       ? err.status
@@ -33,9 +37,7 @@ export const errorHandler = (
         ? err.statusCode
         : 500;
 
-  const errorMsg =
-    err instanceof APIError ? (err.status as string) : err.message;
-
+  const errorMsg = err.message;
   return res
     .status(status || 500)
     .json(new APIResponse(errorMsg || 'Internal server errror', status));

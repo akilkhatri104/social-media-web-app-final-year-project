@@ -1,11 +1,14 @@
 import type { Request, Response } from 'express';
-import { request, response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
 import { media, post } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
-import { eq, or } from 'drizzle-orm';
+import { eq, inArray, or, SQL, sql, type InferSelectModel } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
-import { uploadToCloudinary } from '../lib/cloudinary.ts';
+import {
+  deleteFromCloudinary,
+  generateThumbnail,
+  uploadToCloudinary,
+} from '../lib/cloudinary.ts';
 
 export async function createPost(req: Request, res: Response) {
   try {
@@ -54,7 +57,7 @@ export async function createPost(req: Request, res: Response) {
       const queries = uploadResults.map((res) =>
         db.insert(media).values({
           url: res.secure_url,
-          thumbnailUrl: res.secure_url,
+          thumbnailUrl: generateThumbnail(res.public_id, res.resource_type),
           type: res.resource_type,
           postId: createdPost.postId,
         }),
@@ -134,6 +137,9 @@ export async function deletePostByID(req: Request, res: Response) {
     if (!id) {
       throw new AppError('Invalid post ID provided', 400);
     }
+
+    console.log('deletePostByID :: ', 'Trying to delete post with ID', id);
+
     const [fetchedPost] = await db
       .select()
       .from(post)
@@ -144,6 +150,8 @@ export async function deletePostByID(req: Request, res: Response) {
       throw new AppError('No post found with provided ID', 404);
     }
 
+    console.log('deletePostByID :: ', 'Fetched post with ID', id);
+
     if (fetchedPost.userId !== req.session.user.id) {
       throw new AppError(
         'Post must belong to the logged in user to delete',
@@ -151,9 +159,44 @@ export async function deletePostByID(req: Request, res: Response) {
       );
     }
 
+    console.log('deletePostByID :: ', 'Logged in user ID matches post user ID');
+
+    const allPostMediaUrls = await db.execute<{
+      url: string;
+      type: 'auto' | 'image' | 'video' | 'raw' | undefined;
+    }>(sql`
+   WITH RECURSIVE post_tree AS (
+    SELECT id FROM post WHERE id = ${fetchedPost.id}
+    UNION ALL
+    SELECT p.id
+    FROM post p
+    JOIN post_tree pt ON p.parent_post_id = pt.id
+  )
+  SELECT m.url,m.type
+  FROM media m
+  JOIN post_tree pt ON m.post_id = pt.id
+`);
+
+    console.log('deletePostByID :: ', 'Fetched all post media URLs');
+
+    if (allPostMediaUrls.rows.length > 0) {
+      const deletes = allPostMediaUrls.rows.map((media) =>
+        deleteFromCloudinary(media.url, media.type),
+      );
+
+      const deleteResults = await Promise.all(deletes);
+
+      if (!deleteResults) {
+        throw new AppError(
+          'Error while deleting post media (images/videos)',
+          500,
+        );
+      }
+    }
+
     const deletedPosts = await db
       .delete(post)
-      .where(or(eq(post.id, id), eq(post.parentPostId, id)))
+      .where(eq(post.id, fetchedPost.id))
       .returning({ deletedId: post.id });
 
     if (!deletedPosts.length) {
@@ -170,7 +213,7 @@ export async function deletePostByID(req: Request, res: Response) {
         ),
       );
   } catch (error) {
-    console.error('getPostByID :: ', error);
-    throw error;
+    console.error('deletePostById :: ', error);
+    throw new AppError();
   }
 }

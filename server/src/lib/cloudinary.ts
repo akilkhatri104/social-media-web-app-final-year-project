@@ -37,7 +37,24 @@ export const uploadToCloudinary = async (
   }
 };
 
-export const deleteFromCloudinary = async (url: string) => {
+export const generateThumbnail = (
+  public_id: string,
+  resource_type: 'auto' | 'image' | 'video' | 'raw' | undefined = 'auto',
+) =>
+  cloudinary.url(public_id, {
+    width: 400,
+    height: 225,
+    crop: 'fill',
+    quality: 'auto',
+    resource_type,
+    fetch_format: 'auto',
+    format: 'jpg',
+  });
+
+export const deleteFromCloudinary = async (
+  url: string,
+  resource_type: 'auto' | 'image' | 'video' | 'raw' | undefined = 'auto',
+) => {
   try {
     const publicId = getPublicId(url);
 
@@ -45,11 +62,21 @@ export const deleteFromCloudinary = async (url: string) => {
       throw new Error('Invalid public ID');
     }
 
-    const result: DeleteApiResponse =
-      await cloudinary.uploader.destroy(publicId);
+    console.log(
+      'deleteFromCloudinary :: Deleting media with public ID',
+      publicId,
+    );
+
+    const result: DeleteApiResponse = await cloudinary.uploader.destroy(
+      publicId,
+      { resource_type },
+    );
+
     if (!result) {
       throw new Error('Error while deleting image');
     }
+
+    console.log('deleteFromCloudinary :: Media deleted successfully');
 
     return result;
   } catch (error) {

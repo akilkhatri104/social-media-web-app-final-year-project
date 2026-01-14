@@ -10,7 +10,7 @@ export class AppError extends Error {
   status?: number;
   statusCode?: number;
 
-  constructor(message: string, status = 500) {
+  constructor(message: string = 'Internal server error', status: number = 500) {
     super(message);
     this.status = status;
 

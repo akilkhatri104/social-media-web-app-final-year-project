@@ -1,11 +1,12 @@
 import express from 'express';
 import 'dotenv/config';
 import cors from 'cors';
-import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
+import { toNodeHandler } from 'better-auth/node';
 import { auth } from './lib/auth.js';
 import userRouter from './routers/users.router.js';
 import postRouter from './routers/posts.router.js';
 import followsRouter from './routers/follows.router.js';
+import likesRouter from './routers/likes.router.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
@@ -30,6 +31,7 @@ app.get('/', (req, res) => {
 app.use('/api/users', userRouter);
 app.use('/api/posts', postRouter);
 app.use('/api/follow', followsRouter);
+app.use('/api/likes', likesRouter);
 
 app.use(errorHandler);
 

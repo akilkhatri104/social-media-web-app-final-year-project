@@ -3,6 +3,11 @@ import { AppError } from '../middlewares/errorHandler.js';
 import { type Request, type Response } from 'express';
 import { APIResponse } from '../lib/apiResponse.ts';
 import { deleteFromCloudinary, uploadToCloudinary } from '../lib/cloudinary.ts';
+import { generateOTP } from '../lib/utils.ts';
+import { db } from '../lib/db/client.ts';
+import { user } from '../lib/auth-schema.ts';
+import { eq } from 'drizzle-orm';
+import { APIError } from 'better-auth';
 
 export async function me(req: Request, res: Response) {
   if (!req.session) {
@@ -172,5 +177,152 @@ export async function updateUser(req: Request, res: Response) {
   } catch (error) {
     console.error('updateUser :: ', error);
     throw error;
+  }
+}
+
+export async function sendEmailVerificationOTP(req: Request, res: Response) {
+  try {
+    if (!req.session) {
+      throw new AppError('User needs to be logged in to verify email', 401);
+    }
+
+    if (req.session.user.emailVerified) {
+      throw new AppError('Email already verified', 400);
+    }
+
+    const response = await auth.api.sendVerificationOTP({
+      body: {
+        email: req.session.user.email,
+        type: 'email-verification',
+      },
+    });
+
+    if (!response.success) {
+      throw new AppError('Error while sending email');
+    }
+
+    return res
+      .status(200)
+      .json(new APIResponse('Email verification OTP sent successfully', 200));
+  } catch (error) {
+    console.error('sendEmailVerificationOTP :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}
+
+export async function verifyEmailVerificationOTP(req: Request, res: Response) {
+  try {
+    if (!req.body) {
+      throw new AppError('Request body is empty', 400);
+    }
+
+    const { otp }: { otp: string } = req.body;
+    if (!otp || otp.length !== 6) {
+      throw new AppError('No or invalid OTP provided', 400);
+    }
+    if (!req.session) {
+      throw new AppError('User needs to be logged in to verify email', 401);
+    }
+
+    if (req.session.user.emailVerified) {
+      throw new AppError('Email already verified', 400);
+    }
+
+    const response = await auth.api.verifyEmailOTP({
+      body: {
+        email: req.session.user.email,
+        otp,
+      },
+    });
+
+    if (!response.status) {
+      throw new AppError('Error while verifying email');
+    }
+
+    return res
+      .status(200)
+      .json(new APIResponse('Email verified successfully', 200));
+  } catch (error) {
+    console.error('verifyEmailVerificationOTP :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}
+
+export async function sendForgetPasswordOTP(req: Request, res: Response) {
+  try {
+    if (!req.body) {
+      throw new AppError('Request body is empty', 400);
+    }
+
+    const { email } = req.body;
+
+    if (!email) {
+      throw new AppError('Email not provided', 400);
+    }
+
+    const emailExists = await db
+      .select()
+      .from(user)
+      .where(eq(user.email, email))
+      .limit(1);
+
+    if (emailExists.length === 0) {
+      throw new AppError('No user found with provided email', 404);
+    }
+
+    const response = await auth.api.forgetPasswordEmailOTP({
+      body: {
+        email: email,
+      },
+    });
+
+    if (!response.success) {
+      throw new AppError('Error while sending email');
+    }
+
+    return res
+      .status(200)
+      .json(new APIResponse('Forget email OTP sent successfully', 200));
+  } catch (error) {
+    console.error('sendForgetPasswordOTP :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}
+
+export async function verifyForgetPasswordOTP(req: Request, res: Response) {
+  try {
+    if (!req.body) {
+      throw new AppError('Request body is empty', 400);
+    }
+
+    const { otp, password, email } = req.body;
+    if (!otp || otp.length !== 6) {
+      throw new AppError('No or invalid OTP provided', 400);
+    }
+
+    if (!password || !email) {
+      throw new AppError('No password or email provided', 400);
+    }
+
+    const response = await auth.api.resetPasswordEmailOTP({
+      body: {
+        otp,
+        password,
+        email,
+      },
+    });
+
+    if (!response.success) {
+      throw new AppError('Error while reseting password');
+    }
+
+    return res
+      .status(200)
+      .json(new APIResponse('Password reset successfully', 200));
+  } catch (error) {
+    console.error('verifyForgetPasswordOTP :: ', error);
+    throw error instanceof AppError || error instanceof APIError
+      ? error
+      : new AppError();
   }
 }

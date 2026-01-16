@@ -5,6 +5,10 @@ import {
   me,
   logout,
   updateUser,
+  sendEmailVerificationOTP,
+  verifyEmailVerificationOTP,
+  sendForgetPasswordOTP,
+  verifyForgetPasswordOTP,
 } from '../controllers/users.controller.js';
 import { verifyAuth } from '../middlewares/verifyAuth.ts';
 import { upload } from '../lib/multer.ts';
@@ -17,10 +21,14 @@ protectedRouter.use(verifyAuth);
 
 publicRouter.post('/signin', signin);
 publicRouter.post('/signup', upload.single('image'), signup);
+publicRouter.post('/forget-password/send', sendForgetPasswordOTP);
+publicRouter.post('/forget-password/verify', verifyForgetPasswordOTP);
 
 protectedRouter.post('/logout', logout);
 protectedRouter.get('/me', me);
 protectedRouter.put('/', upload.single('image'), updateUser);
+protectedRouter.get('/verify-email', sendEmailVerificationOTP);
+protectedRouter.post('/verify-email', verifyEmailVerificationOTP);
 
 router.use(publicRouter);
 router.use(protectedRouter);

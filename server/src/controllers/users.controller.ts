@@ -3,7 +3,6 @@ import { AppError } from '../middlewares/errorHandler.js';
 import { type Request, type Response } from 'express';
 import { APIResponse } from '../lib/apiResponse.ts';
 import { deleteFromCloudinary, uploadToCloudinary } from '../lib/cloudinary.ts';
-import { generateOTP } from '../lib/utils.ts';
 import { db } from '../lib/db/client.ts';
 import { user } from '../lib/auth-schema.ts';
 import { eq } from 'drizzle-orm';
@@ -21,13 +20,37 @@ export async function me(req: Request, res: Response) {
 
 export async function signin(req: Request, res: Response) {
   try {
-    const { email, password, username } = req.body;
+    const {
+      email,
+      password,
+      username,
+    }: { email: string; password: string; username: string } = req.body;
     if (!email && !username) {
       throw new AppError('Email or Username are required', 400);
     }
 
     if (!password) {
       throw new AppError('Password is required', 400);
+    }
+
+    if (
+      !email.match(
+        /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
+      )
+    ) {
+      throw new AppError('Email is not valid', 400);
+    }
+
+    if (
+      !password.match(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/gm)
+    ) {
+      throw new AppError(
+        `Password must contain: 
+        - at least 8 characters
+- must contain at least 1 uppercase letter, 1 lowercase letter, and 1 number
+- Can contain special characters`,
+        400,
+      );
     }
 
     let response = null;
@@ -55,7 +78,9 @@ export async function signin(req: Request, res: Response) {
       );
   } catch (error) {
     console.error('signin :: ', error);
-    throw error;
+    throw error instanceof AppError || error instanceof APIError
+      ? error
+      : new AppError();
   }
 }
 
@@ -66,10 +91,36 @@ export async function signup(req: Request, res: Response) {
     throw new AppError('Request body is missing', 400);
   }
   try {
-    const { email, password, name, image, username } = req.body;
+    const {
+      email,
+      password,
+      name,
+      username,
+    }: { email: string; password: string; name: string; username: string } =
+      req.body;
     if (!email || !password || !name || !username) {
       console.error('Email, Username, Password and Name are required');
       throw new AppError('Email, Password and Name are required', 400);
+    }
+
+    if (
+      !email.match(
+        /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
+      )
+    ) {
+      throw new AppError('Email is not valid', 400);
+    }
+
+    if (
+      !password.match(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/gm)
+    ) {
+      throw new AppError(
+        `Password must contain: 
+        - at least 8 characters
+- must contain at least 1 uppercase letter, 1 lowercase letter, and 1 number
+- Can contain special characters`,
+        400,
+      );
     }
     console.log('Request body is valid');
 
@@ -104,7 +155,9 @@ export async function signup(req: Request, res: Response) {
       );
   } catch (error) {
     console.error('signup :: ', error);
-    throw error;
+    throw error instanceof AppError || error instanceof APIError
+      ? error
+      : new AppError();
   }
 }
 
@@ -124,7 +177,9 @@ export async function logout(req: Request, res: Response) {
       .json(new APIResponse('User logged out successfully', 200));
   } catch (error) {
     console.error('logout :: ', error);
-    throw error;
+    throw error instanceof AppError || error instanceof APIError
+      ? error
+      : new AppError();
   }
 }
 
@@ -176,7 +231,9 @@ export async function updateUser(req: Request, res: Response) {
     return res.status(200).json(new APIResponse('User details updated', 200));
   } catch (error) {
     console.error('updateUser :: ', error);
-    throw error;
+    throw error instanceof AppError || error instanceof APIError
+      ? error
+      : new AppError();
   }
 }
 
@@ -206,7 +263,9 @@ export async function sendEmailVerificationOTP(req: Request, res: Response) {
       .json(new APIResponse('Email verification OTP sent successfully', 200));
   } catch (error) {
     console.error('sendEmailVerificationOTP :: ', error);
-    throw error instanceof AppError ? error : new AppError();
+    throw error instanceof AppError || error instanceof APIError
+      ? error
+      : new AppError();
   }
 }
 
@@ -228,6 +287,18 @@ export async function verifyEmailVerificationOTP(req: Request, res: Response) {
       throw new AppError('Email already verified', 400);
     }
 
+    const { success: isOTPValid } = await auth.api.checkVerificationOTP({
+      body: {
+        email: req.session.user.email,
+        otp,
+        type: 'email-verification',
+      },
+    });
+
+    if (!isOTPValid) {
+      throw new AppError('OTP not valid', 400);
+    }
+
     const response = await auth.api.verifyEmailOTP({
       body: {
         email: req.session.user.email,
@@ -244,7 +315,9 @@ export async function verifyEmailVerificationOTP(req: Request, res: Response) {
       .json(new APIResponse('Email verified successfully', 200));
   } catch (error) {
     console.error('verifyEmailVerificationOTP :: ', error);
-    throw error instanceof AppError ? error : new AppError();
+    throw error instanceof AppError || error instanceof APIError
+      ? error
+      : new AppError();
   }
 }
 
@@ -285,7 +358,9 @@ export async function sendForgetPasswordOTP(req: Request, res: Response) {
       .json(new APIResponse('Forget email OTP sent successfully', 200));
   } catch (error) {
     console.error('sendForgetPasswordOTP :: ', error);
-    throw error instanceof AppError ? error : new AppError();
+    throw error instanceof AppError || error instanceof APIError
+      ? error
+      : new AppError();
   }
 }
 
@@ -302,6 +377,18 @@ export async function verifyForgetPasswordOTP(req: Request, res: Response) {
 
     if (!password || !email) {
       throw new AppError('No password or email provided', 400);
+    }
+
+    const { success: isOTPValid } = await auth.api.checkVerificationOTP({
+      body: {
+        email: email,
+        otp,
+        type: 'forget-password',
+      },
+    });
+
+    if (!isOTPValid) {
+      throw new AppError('OTP not valid', 400);
     }
 
     const response = await auth.api.resetPasswordEmailOTP({

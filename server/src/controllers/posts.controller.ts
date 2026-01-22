@@ -146,14 +146,29 @@ export async function getPostFromUser(req: Request, res: Response) {
     }
 
     const id = req.params['id'];
-    const fetchedPosts = await db
-      .select()
-      .from(post)
-      .where(eq(post.userId, id));
+    const fetchedPosts = await db.query.post.findMany({
+      where: eq(post.userId, id),
+      with: {
+        likes: true,
+        media: true,
+        comments: {
+          with: { media: true, likes: true },
+        },
+      },
+    });
+
+    const resultPosts = fetchedPosts.map((post) => ({
+      ...post,
+      likeCount: post.likes.length,
+      comments: post.comments.map((comment) => ({
+        ...comment,
+        likeCount: comment.likes.length,
+      })),
+    }));
 
     return res
       .status(200)
-      .json(new APIResponse('Posts fetched successfully', 200, fetchedPosts));
+      .json(new APIResponse('Posts fetched successfully', 200, resultPosts));
   } catch (error) {
     console.error('getPostFromUser :: ', error);
     throw error;

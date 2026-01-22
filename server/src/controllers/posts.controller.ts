@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
-import { media, post } from '../lib/db/schema.ts';
+import { media, post, like } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
-import { eq, inArray, or, SQL, sql, type InferSelectModel } from 'drizzle-orm';
+import { count, eq, inArray, sql, type InferSelectModel } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
 import {
   deleteFromCloudinary,
@@ -14,6 +14,13 @@ export async function createPost(req: Request, res: Response) {
   try {
     if (!req.session) {
       throw new AppError('User needs to be logged in to create a post', 401);
+    }
+
+    if (!req.session.user.emailVerified) {
+      throw new AppError(
+        'User needs to verify their email to create a post',
+        401,
+      );
     }
 
     const { parentPostId, content, visibility } = req.body;
@@ -70,8 +77,35 @@ export async function createPost(req: Request, res: Response) {
       .json(new APIResponse('Post created successfully!', 201, createdPost));
   } catch (error) {
     console.error('createPost :: ', error);
-    throw error;
+    throw error instanceof AppError ? error : new AppError();
   }
+}
+
+export async function getPostCommentsLikeCountMediaByPostID(id: number) {
+  const result = await db.query.post.findFirst({
+    where: eq(post.id, id),
+    with: {
+      media: true,
+      likes: true,
+      comments: {
+        with: {
+          media: true,
+          likes: true,
+        },
+      },
+    },
+  });
+
+  if (!result) return null;
+
+  return {
+    ...result,
+    likeCount: result.likes.length,
+    comments: result.comments.map((comment) => ({
+      ...comment,
+      likeCount: comment.likes.length,
+    })),
+  };
 }
 
 export async function getPostByID(req: Request, res: Response) {
@@ -94,9 +128,11 @@ export async function getPostByID(req: Request, res: Response) {
       throw new AppError('No post found with provided ID', 404);
     }
 
+    const result = await getPostCommentsLikeCountMediaByPostID(id);
+
     return res
       .status(200)
-      .json(new APIResponse('Post fetched successfully', 200, fetchedPost));
+      .json(new APIResponse('Post fetched successfully', 200, result));
   } catch (error) {
     console.error('getPostByID :: ', error);
     throw error;

@@ -78,3 +78,43 @@ export const follow = p.pgTable('follow', {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
+
+import { relations, sql } from 'drizzle-orm';
+// ... existing schema imports and tables ...
+
+// 1. Post Relations (Connects posts to media, likes, and itself for comments)
+export const postRelations = relations(post, ({ one, many }) => ({
+  media: many(media),
+  likes: many(like),
+  // Self-referencing relation for comments
+  comments: many(post, { relationName: 'post_comments' }),
+  parentPost: one(post, {
+    fields: [post.parentPostId],
+    references: [post.id],
+    relationName: 'post_comments',
+  }),
+  author: one(user, {
+    fields: [post.userId],
+    references: [user.id],
+  }),
+}));
+
+// 2. Media Relations
+export const mediaRelations = relations(media, ({ one }) => ({
+  post: one(post, {
+    fields: [media.postId],
+    references: [post.id],
+  }),
+}));
+
+// 3. Like Relations
+export const likeRelations = relations(like, ({ one }) => ({
+  post: one(post, {
+    fields: [like.postId],
+    references: [post.id],
+  }),
+  user: one(user, {
+    fields: [like.userId],
+    references: [user.id],
+  }),
+}));

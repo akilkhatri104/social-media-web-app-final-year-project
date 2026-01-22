@@ -81,33 +81,6 @@ export async function createPost(req: Request, res: Response) {
   }
 }
 
-export async function getPostCommentsLikeCountMediaByPostID(id: number) {
-  const result = await db.query.post.findFirst({
-    where: eq(post.id, id),
-    with: {
-      media: true,
-      likes: true,
-      comments: {
-        with: {
-          media: true,
-          likes: true,
-        },
-      },
-    },
-  });
-
-  if (!result) return null;
-
-  return {
-    ...result,
-    likeCount: result.likes.length,
-    comments: result.comments.map((comment) => ({
-      ...comment,
-      likeCount: comment.likes.length,
-    })),
-  };
-}
-
 export async function getPostByID(req: Request, res: Response) {
   try {
     if (!req.params || !req.params['id']) {
@@ -118,24 +91,49 @@ export async function getPostByID(req: Request, res: Response) {
     if (!id) {
       throw new AppError('Invalid post ID provided', 400);
     }
-    const [fetchedPost] = await db
-      .select()
-      .from(post)
-      .where(eq(post.id, id))
-      .limit(1);
+    const postExists = await db.query.post.findFirst({
+      where: eq(post.id, id),
+    });
 
-    if (!fetchedPost) {
+    if (!postExists) {
       throw new AppError('No post found with provided ID', 404);
     }
 
-    const result = await getPostCommentsLikeCountMediaByPostID(id);
+    const fetchedPost = await db.query.post.findFirst({
+      where: eq(post.id, id),
+      with: {
+        media: true,
+        likes: true,
+        author: true,
+        comments: {
+          with: {
+            media: true,
+            likes: true,
+            author: true,
+          },
+        },
+      },
+    });
+
+    if (!fetchedPost) {
+      throw new AppError('Error while fetching post', 500);
+    }
+
+    const resultPost = {
+      ...fetchedPost,
+      likeCount: fetchedPost.likes.length,
+      comments: fetchedPost.comments.map((comment) => ({
+        ...comment,
+        likeCount: comment.likes.length,
+      })),
+    };
 
     return res
       .status(200)
-      .json(new APIResponse('Post fetched successfully', 200, result));
+      .json(new APIResponse('Post fetched successfully', 200, resultPost));
   } catch (error) {
     console.error('getPostByID :: ', error);
-    throw error;
+    throw error instanceof AppError ? error : new AppError();
   }
 }
 
@@ -151,8 +149,9 @@ export async function getPostFromUser(req: Request, res: Response) {
       with: {
         likes: true,
         media: true,
+        author: true,
         comments: {
-          with: { media: true, likes: true },
+          with: { media: true, likes: true, author: true },
         },
       },
     });
@@ -171,7 +170,7 @@ export async function getPostFromUser(req: Request, res: Response) {
       .json(new APIResponse('Posts fetched successfully', 200, resultPosts));
   } catch (error) {
     console.error('getPostFromUser :: ', error);
-    throw error;
+    throw error instanceof AppError ? error : new AppError();
   }
 }
 
@@ -265,6 +264,6 @@ export async function deletePostByID(req: Request, res: Response) {
       );
   } catch (error) {
     console.error('deletePostById :: ', error);
-    throw new AppError();
+    throw error instanceof AppError ? error : new AppError();
   }
 }

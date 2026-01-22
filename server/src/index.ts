@@ -23,8 +23,6 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.post('/test', (req, res) => res.json(req.body));
-
 app.get('/', (req, res) => {
   res.send('Hello World TSX!');
 });

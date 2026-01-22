@@ -80,7 +80,6 @@ export const follow = p.pgTable('follow', {
 });
 
 import { relations, sql } from 'drizzle-orm';
-// ... existing schema imports and tables ...
 
 // 1. Post Relations (Connects posts to media, likes, and itself for comments)
 export const postRelations = relations(post, ({ one, many }) => ({

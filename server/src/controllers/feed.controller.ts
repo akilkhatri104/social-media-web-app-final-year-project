@@ -16,10 +16,37 @@ export async function getFollowingFeed(req: Request, res: Response) {
       .from(follow)
       .where(eq(follow.followerId, req.session.user.id));
 
-    const posts = await db
-      .select()
-      .from(post)
-      .where(inArray(post.userId, follows));
+    const fetchedPosts = await db.query.post.findMany({
+      where: inArray(post.userId, follows),
+      with: {
+        likes: true,
+        media: true,
+        comments: {
+          with: { media: true, likes: true },
+          orderBy: desc(post.updatedAt),
+        },
+      },
+      orderBy: desc(post.updatedAt),
+    });
+
+    const resultPosts = fetchedPosts.map((post) => ({
+      ...post,
+      likeCount: post.likes.length,
+      comments: post.comments.map((comment) => ({
+        ...comment,
+        likeCount: comment.likes.length,
+      })),
+    }));
+
+    return res
+      .status(200)
+      .json(
+        new APIResponse(
+          'Following feed fetched successfully',
+          200,
+          resultPosts,
+        ),
+      );
   } catch (error) {
     console.error('getFollowingFeed :: ', error);
     throw error instanceof AppError ? error : new AppError();
@@ -28,9 +55,36 @@ export async function getFollowingFeed(req: Request, res: Response) {
 
 export async function getSimpleForYouFeed(req: Request, res: Response) {
   try {
-    const posts = await db.select().from(post).orderBy(desc(post.updatedAt));
+    const fetchedPosts = await db.query.post.findMany({
+      with: {
+        likes: true,
+        media: true,
+        comments: {
+          with: { media: true, likes: true },
+          orderBy: desc(post.updatedAt),
+        },
+      },
+      orderBy: desc(post.updatedAt),
+    });
 
-    return res.status(200).json(new APIResponse('Posts fetched', 200, posts));
+    const resultPosts = fetchedPosts.map((post) => ({
+      ...post,
+      likeCount: post.likes.length,
+      comments: post.comments.map((comment) => ({
+        ...comment,
+        likeCount: comment.likes.length,
+      })),
+    }));
+
+    return res
+      .status(200)
+      .json(
+        new APIResponse(
+          'Simple For You feed fetched successfully',
+          200,
+          resultPosts,
+        ),
+      );
   } catch (error) {
     console.error('getSimpleForYouFeed :: ', error);
     throw error instanceof AppError ? error : new AppError();

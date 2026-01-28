@@ -13,7 +13,7 @@ export async function toggleFollow(req: Request, res: Response) {
     }
 
     const { followingId } = req.params;
-    if (!followingId) {
+    if (!followingId || followingId !== 'string') {
       throw new AppError('user id not provided to follow', 400);
     }
 
@@ -80,7 +80,7 @@ export async function toggleFollow(req: Request, res: Response) {
 export async function getFollowerCountByUserId(req: Request, res: Response) {
   try {
     const { userId } = req.params;
-    if (!userId) {
+    if (!userId || typeof userId !== 'string') {
       throw new AppError('No user ID provided', 400);
     }
     const userExists = await db
@@ -112,7 +112,7 @@ export async function getFollowerCountByUserId(req: Request, res: Response) {
 export async function getFollowingCountByUserId(req: Request, res: Response) {
   try {
     const { userId } = req.params;
-    if (!userId) {
+    if (!userId || typeof userId !== 'string') {
       throw new AppError('No user ID provided', 400);
     }
     const userExists = await db

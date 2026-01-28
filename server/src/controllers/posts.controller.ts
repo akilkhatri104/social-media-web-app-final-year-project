@@ -144,6 +144,9 @@ export async function getPostFromUser(req: Request, res: Response) {
     }
 
     const id = req.params['id'];
+    if (!id || typeof id !== 'string') {
+      throw new AppError('Invalid user ID provided', 400);
+    }
     const fetchedPosts = await db.query.post.findMany({
       where: eq(post.userId, id),
       with: {

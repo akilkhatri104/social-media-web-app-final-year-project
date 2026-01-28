@@ -14,7 +14,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  baseURL: process.env.BETTER_AUTH_URL!,
+  baseURL: process.env.FRONTEND_URL!,
   plugins: [
     username(),
     emailOTP({

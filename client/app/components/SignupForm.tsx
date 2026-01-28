@@ -85,8 +85,11 @@ export const SignupForm = () => {
             queryClient.invalidateQueries({ queryKey: ['user'] })
             navigate('/')
         } catch (error) {
-            console.log(error)
-            toast.error(axios.isAxiosError(error) ? error.response?.data.message : "Unknown error")
+            console.error(error)
+            if (axios.isAxiosError(error)) {
+                toast.error(error.response?.data.message)
+            }
+            toast.error("Unknown error")
         }
 
     }

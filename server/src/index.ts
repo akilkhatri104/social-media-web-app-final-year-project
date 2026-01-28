@@ -12,14 +12,15 @@ import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
 
-// mount BetterAuth
-app.all('/api/auth/*splat', toNodeHandler(auth));
-
 app.use(
   cors({
     credentials: true,
   }),
 );
+
+// mount BetterAuth
+app.all('/api/auth/*splat', toNodeHandler(auth));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

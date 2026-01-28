@@ -24,8 +24,8 @@ publicRouter.post('/signup', upload.single('image'), signup);
 publicRouter.post('/forget-password/send', sendForgetPasswordOTP);
 publicRouter.post('/forget-password/verify', verifyForgetPasswordOTP);
 
-protectedRouter.post('/logout', logout);
 protectedRouter.get('/me', me);
+protectedRouter.post('/logout', logout);
 protectedRouter.put('/', upload.single('image'), updateUser);
 protectedRouter.get('/verify-email', sendEmailVerificationOTP);
 protectedRouter.post('/verify-email', verifyEmailVerificationOTP);

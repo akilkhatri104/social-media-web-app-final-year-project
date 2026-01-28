@@ -20,26 +20,14 @@ export async function me(req: Request, res: Response) {
 
 export async function signin(req: Request, res: Response) {
   try {
-    const {
-      email,
-      password,
-      username,
-    }: { email: string; password: string; username: string } = req.body;
-    if (!email && !username) {
+    const { password, username }: { password: string; username: string } =
+      req.body;
+    if (!username) {
       throw new AppError('Email or Username are required', 400);
     }
 
     if (!password) {
       throw new AppError('Password is required', 400);
-    }
-
-    if (
-      email &&
-      !email.match(
-        /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
-      )
-    ) {
-      throw new AppError('Email is not valid', 400);
     }
 
     if (
@@ -55,7 +43,12 @@ export async function signin(req: Request, res: Response) {
     }
 
     let response = null;
-    if (username) {
+    // Is not an email, hence user is signing in through username
+    if (
+      !username.match(
+        /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
+      )
+    ) {
       response = await auth.api.signInUsername({
         returnHeaders: true,
         body: { username, password },
@@ -63,7 +56,7 @@ export async function signin(req: Request, res: Response) {
     } else {
       response = await auth.api.signInEmail({
         returnHeaders: true,
-        body: { email, password },
+        body: { email: username, password },
       });
     }
 

@@ -73,7 +73,7 @@ export const SignupForm = () => {
         try {
             toast("Signing up...")
             console.log(data)
-            const response = await api.post<APIResponse>('api/users/signup', data)
+            const response = await api.post<APIResponse>('/api/users/signup', data)
             console.log(response)
             if (response.status >= 400 || !response.data.success) {
                 toast.error(response.data.message)

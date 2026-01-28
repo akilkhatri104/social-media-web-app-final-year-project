@@ -56,7 +56,7 @@ export const SigninForm = () => {
         try {
             toast('Signing in...')
             console.log(data)
-            const response = await api.post<APIResponse>('api/users/signin', data)
+            const response = await api.post<APIResponse>('/api/users/signin', data)
             console.log(response)
             if (response.status >= 400 || !response.data.success) {
                 toast.error(response.data.message)

@@ -5,8 +5,12 @@
     "rewriteRelativeImportExtensions": true,
 
     // File Layout
-    // "rootDir": "./src",
-    // "outDir": "./dist",
+    "outDir": "dist",
+    "rootDir": ".", // Set root to project base
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"] // Keep your alias working
+    },
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
@@ -41,5 +45,11 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true
-  }
+  },
+  "include": [
+    "src/**/*", // Include app code
+    "*.config.ts", // Include root configs for type-checking
+    ".env"
+  ],
+  "exclude": ["node_modules", "dist"]
 }

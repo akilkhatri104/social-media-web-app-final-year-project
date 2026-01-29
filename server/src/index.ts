@@ -12,13 +12,17 @@ import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
 
+const FRONTEND_URL = process.env.FRONTEND_URL;
+if (!FRONTEND_URL || typeof FRONTEND_URL !== 'string') {
+  throw new Error('FRONTEND_URL env not set');
+}
 app.use(
   cors({
-    origin: [process.env.FRONTEND_URL!],
+    origin: [FRONTEND_URL],
     credentials: true,
   }),
 );
-app.options('/', cors());
+app.options('*', cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

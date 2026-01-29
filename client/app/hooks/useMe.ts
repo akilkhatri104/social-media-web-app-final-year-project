@@ -14,7 +14,7 @@ export const fetchCurrentUser = async () => {
 };
 
 export function useMe() {
-    return useQuery({
+    const query = useQuery({
         queryKey: ["user"],
         queryFn: fetchCurrentUser,
         retry: false,
@@ -22,4 +22,9 @@ export function useMe() {
         refetchOnMount: false,
         refetchOnWindowFocus: false,
     });
+    return {
+        ...query,
+        isAuth: query.isSuccess && !!query.data,
+        isInitialLoading: query.isLoading && !query.isPaused,
+    };
 }

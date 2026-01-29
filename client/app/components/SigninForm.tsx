@@ -36,9 +36,7 @@ const formSchema = z.object({
 
 export const SigninForm = () => {
     const navigate = useNavigate()
-    const { data, isError, isPending } = useMe()
-
-    let isAuth = !!data && !isError
+    const { data, isError, isPending, isAuth } = useMe()
 
     useEffect(() => {
         if (isAuth) {
@@ -71,8 +69,8 @@ export const SigninForm = () => {
             console.error(error)
             if (axios.isAxiosError(error)) {
                 toast.error(error.response?.data.message)
-            }
-            toast.error("Unknown error")
+            } else
+                toast.error("Unknown error")
         }
 
     }

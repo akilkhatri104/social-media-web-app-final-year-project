@@ -1,5 +1,5 @@
 export type APIResponse = {
-    data: unknown;
+    data: any;
     status: number;
     message: string;
     success: boolean;

@@ -15,6 +15,18 @@ export const auth = betterAuth({
     enabled: true,
   },
   baseURL: process.env.FRONTEND_URL!,
+  trustedOrigins: [process.env.FRONTEND_URL!],
+  session: {
+    cookieCache: {
+      enabled: true,
+    },
+    cookie: {
+      secure: true,
+      sameSite: 'none',
+      httpOnly: true,
+      maxAge: 60 * 60 * 24 * 7,
+    },
+  },
   plugins: [
     username(),
     emailOTP({

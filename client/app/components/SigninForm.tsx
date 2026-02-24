@@ -75,7 +75,7 @@ export const SigninForm = () => {
 
     }
     return isPending ? <h1>Loading...</h1> : (
-        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col p-3 bg-accent-foreground text-accent rounded-xl w-full md:w-1/3'>
+        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col p-3 bg-secondary text-secondary-foreground rounded-xl w-full md:w-1/3'>
             <div className='text-center'>
                 <h1 className='font-bold text-lg'>Signin</h1>
                 <p className='text-sm'>Don't have an account? Signup <NavLink to='signup'>here</NavLink></p>

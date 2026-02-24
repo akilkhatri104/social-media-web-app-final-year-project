@@ -7,7 +7,7 @@ export const fetchCurrentUser = async () => {
     try {
         const response = await api.get<APIResponse>("/api/users/me");
 
-        return response.data.data;
+        return response.data.data.user;
     } catch (error) {
         throw error;
     }

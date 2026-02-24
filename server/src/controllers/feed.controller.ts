@@ -57,10 +57,17 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
   try {
     const fetchedPosts = await db.query.post.findMany({
       with: {
+        author: true,
         likes: true,
         media: true,
+        parentPost: { with: { author: true } },
         comments: {
-          with: { media: true, likes: true },
+          with: {
+            media: true,
+            likes: true,
+            author: true,
+            parentPost: { with: { author: true } },
+          },
           orderBy: desc(post.updatedAt),
         },
       },
@@ -70,6 +77,7 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
     const resultPosts = fetchedPosts.map((post) => ({
       ...post,
       likeCount: post.likes.length,
+      commentCount: post.comments.length,
       comments: post.comments.map((comment) => ({
         ...comment,
         likeCount: comment.likes.length,

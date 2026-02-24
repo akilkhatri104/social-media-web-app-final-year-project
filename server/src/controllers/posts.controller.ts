@@ -112,6 +112,11 @@ export async function getPostByID(req: Request, res: Response) {
             author: true,
           },
         },
+        parentPost: {
+          with: {
+            author: true,
+          },
+        },
       },
     });
 

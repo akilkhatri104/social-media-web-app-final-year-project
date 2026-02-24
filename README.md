@@ -58,7 +58,7 @@ To run this project, you will need to add the following environment variables to
 
 `BETTER_AUTH_SECRET` : A secret value used for encryption and hashing. It must be at least 32 characters and generated with high entropy.
 
-`BETTER_AUTH_URL` : Base URL of your app
+`FRONTEND_URL` : Base URL of your frontend
 
 `CLOUDINARY_CLOUD_NAME` : Cloud name from your Cloudinary envrionment
 

@@ -6,7 +6,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
 import { Heart, MessageCircle, Repeat2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import { queryClient } from "~/lib/react-query";
 import type { APIResponse } from "~/lib/types";
@@ -29,9 +29,17 @@ const PostCard = ({ post }: Props) => {
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['post'] })
             queryClient.invalidateQueries({ queryKey: ['posts'] })
+            queryClient.invalidateQueries({ queryKey: ['likeStatus', post.id] })
             toast.success(data.message)
 
         }
+    })
+    const { data: likeStatus, isPending } = useQuery({
+        queryFn: async () => {
+            const response = await api.get<APIResponse>(`/api/likes/likeStatus/${post.id}`)
+            return !!response.data.data?.likeStatus
+        },
+        queryKey: ['likeStatus', post.id],
     })
     return (
         <Card className="border-0 rounded-none hover:bg-muted/40 transition cursor-pointer">
@@ -141,7 +149,7 @@ const PostCard = ({ post }: Props) => {
                             className="flex items-center gap-2 text-muted-foreground"
                             onClick={() => likeMutation.mutate()}
                         >
-                            <Heart size={18} />
+                            <Heart size={18} fill={!isPending && likeStatus ? "red" : undefined} />
                             {post.likeCount}
                         </Button>
                     </div>

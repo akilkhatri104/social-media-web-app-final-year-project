@@ -93,7 +93,45 @@ export async function getLikesCountByPostId(req: Request, res: Response) {
       }),
     );
   } catch (error) {
-    console.error('getFollowerCountByUserId :: ', error);
+    console.error('getLikesCountByPostId :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}
+
+export async function getLikeStatusByPostId(req: Request, res: Response) {
+  try {
+    if (!req.session) {
+      throw new AppError(
+        'User needs to be logged in to access their like status',
+        401,
+      );
+    }
+
+    const postId = Number(req.params.postId);
+    if (!postId) {
+      throw new AppError('No or invalid postID provided', 400);
+    }
+
+    const result = await db
+      .select()
+      .from(like)
+      .where(and(eq(like.postId, postId), eq(like.userId, req.session.user.id)))
+      .limit(1);
+
+    if (result.length === 0) {
+      return res.json(
+        new APIResponse('User has not liked the post', 200, {
+          likeStatus: false,
+        }),
+      );
+    }
+    return res.json(
+      new APIResponse('User has liked the post', 200, {
+        likeStatus: true,
+      }),
+    );
+  } catch (error) {
+    console.error('getLikeStatusByPostId :: ', error);
     throw error instanceof AppError ? error : new AppError();
   }
 }

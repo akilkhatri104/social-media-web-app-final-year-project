@@ -28,11 +28,11 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/web
 const formSchema = z.object({
     name: z
         .string()
-        .min(3, "Name must be at least 4 characters.")
+        .min(3, "Name must be at least 3 characters.")
         .max(32, "Name must be at most 32 characters."),
     username: z
         .string()
-        .min(3, "Username must be at least 5 characters.")
+        .min(3, "Username must be at least 3 characters.")
         .max(32, "Username must be at most 32 characters."),
     password: z
         .string()
@@ -92,10 +92,10 @@ export const SignupForm = () => {
 
     }
     return isPending ? <h1>Loading...</h1> : (
-        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col p-3 bg-secondary text-secondary-foreground rounded-xl w-full md:w-1/3'>
+        <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col p-3 bg-card text-card-foreground rounded-xl w-full md:w-1/3'>
             <div className='text-center'>
                 <h1 className='font-bold text-lg'>Signup</h1>
-                <p className='text-sm'>Already have an account? Signin <NavLink to='signin'>here</NavLink></p>
+                <p className='text-sm'>Already have an account? Signin <NavLink to='/signin'>here</NavLink></p>
             </div>
 
             <FieldSet className='mt-3'>

@@ -39,7 +39,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body className="h-screen">
+      <body className="min-h-screen bg-muted/40">
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <Header />
@@ -55,7 +55,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  return (
+    <div>
+      <Outlet />
+    </div>
+  )
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
@@ -75,7 +79,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <main className="pt-16 p-4 container mx-auto">
+    <main className="p-16 container mx-auto bg-card w-fit roundex-2xl">
       <h1>{message}</h1>
       <p>{details}</p>
       {stack && (

@@ -1,33 +1,23 @@
 import * as p from 'drizzle-orm/pg-core';
 import { user } from '../auth-schema.ts';
 
-export const post = p.pgTable(
-  'post',
-  {
-    id: p.serial('id').primaryKey(),
-    userId: p
-      .text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    parentPostId: p.integer('parent_post_id'),
-    content: p.text('content').notNull(),
-    visibility: p
-      .text('visibility', { enum: ['public', 'followers'] })
-      .default('public'),
-    createdAt: p.timestamp('created_at').defaultNow().notNull(),
-    updatedAt: p
-      .timestamp('updated_at')
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [
-    p.foreignKey({
-      columns: [table.parentPostId],
-      foreignColumns: [table.id],
-      name: 'parent_post_fk',
-    }),
-  ],
-);
+export const post = p.pgTable('post', {
+  id: p.serial('id').primaryKey(),
+  userId: p
+    .text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  parentPostId: p.integer('parent_post_id'),
+  content: p.text('content').notNull(),
+  visibility: p
+    .text('visibility', { enum: ['public', 'followers'] })
+    .default('public'),
+  createdAt: p.timestamp('created_at').defaultNow().notNull(),
+  updatedAt: p
+    .timestamp('updated_at')
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
 
 export const like = p.pgTable('like', {
   id: p.serial('id').notNull().primaryKey(),

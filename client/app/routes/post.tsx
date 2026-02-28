@@ -55,12 +55,11 @@ export default function PostPage() {
                 {/* Comments */}
                 <div>
                     {data.comments?.map((comment: any) => (
-                        <NavLink to={`/post/${comment.id}`}>
-                            <div key={comment.id}>
-                                <PostCard post={comment} />
-                                <Separator />
-                            </div>
-                        </NavLink>
+                        <div key={comment.id}>
+                            <PostCard post={comment} />
+                            <Separator />
+                        </div>
+
                     ))}
                 </div>
 

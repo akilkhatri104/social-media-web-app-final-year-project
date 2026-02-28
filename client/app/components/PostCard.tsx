@@ -3,20 +3,66 @@ import {
     Card,
     CardContent,
 } from "~/components/ui/card";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "~/components/ui/alert-dialog"
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
-import { Heart, MessageCircle, Repeat2 } from "lucide-react";
+import { EllipsisVerticalIcon, Heart, MessageCircle, Repeat2, Share2Icon, Trash2Icon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import { queryClient } from "~/lib/react-query";
 import type { APIResponse } from "~/lib/types";
 import { toast } from "sonner";
+import axios from "axios";
+import { useState } from "react";
+import { useMe } from "~/hooks/useMe";
 
 type Props = {
     post: any;
 };
 
 const PostCard = ({ post }: Props) => {
+    const [shareDialogOpen, setShareDialogOpen] = useState(false)
+    const [deleteDialogOpen, setDeletedDialogOpen] = useState(false)
+    const { isInitialLoading, data: session, isAuth } = useMe()
+    const shareAction = () => {
+        navigator.clipboard.writeText(`${import.meta.env.VITE_FRONTEND_URL}/post/${post.id}`)
+        toast.success("Post link has been copied to clipboard!")
+    }
+    const deleteAction = async () => {
+        try {
+            if (!(!isInitialLoading && isAuth) || post.userId != session.id) {
+                toast.error("User either not locked in or not authorized to delete the post")
+                return
+            }
+            toast("Deleting the post....")
+
+            const res = await api.delete<APIResponse>(`/api/posts/${post.id}`)
+            toast.success(res.data.message)
+            queryClient.invalidateQueries({ queryKey: ['post', post.id] })
+            queryClient.invalidateQueries({ queryKey: ['posts'] })
+        } catch (error) {
+            toast.error(axios.isAxiosError(error) ? error.response?.data.message : "Unknown error while deleting the post")
+        }
+    }
     const likeMutation = useMutation({
         mutationFn: async () => {
             const response = await api.post<APIResponse>(`/api/likes/${post.id}`)
@@ -24,7 +70,7 @@ const PostCard = ({ post }: Props) => {
             return response.data
         },
         onError: (err) => {
-            toast.error(err.message)
+            toast.error(axios.isAxiosError(err) ? err?.response?.data.message : "An unknown error")
         },
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['post'] })
@@ -42,7 +88,7 @@ const PostCard = ({ post }: Props) => {
         queryKey: ['likeStatus', post.id],
     })
     return (
-        <Card className="border-0 rounded-none hover:bg-muted/40 transition cursor-pointer">
+        <Card className="border-0 rounded-none hover:bg-card/40 transition cursor-pointer">
             <CardContent className="flex gap-4 p-4">
 
                 {/* Avatar */}
@@ -72,21 +118,89 @@ const PostCard = ({ post }: Props) => {
                     )}
 
                     {/* Header */}
-                    <div className="flex items-center gap-2 text-sm">
-                        <Link
-                            to={`/@${post.author.displayUsername}`}
-                            className="font-semibold hover:underline"
-                        >
-                            {post.author.name}
-                        </Link>
-                        <span className="text-muted-foreground">
-                            @{post.author.displayUsername}
-                        </span>
-                        <span className="text-muted-foreground">·</span>
-                        <span className="text-muted-foreground">
-                            {new Date(post.createdAt).toLocaleDateString()}
-                        </span>
+                    <div className="flex items-center justify-between gap-2 text-sm">
+                        <div>
+                            <Link
+                                to={`/@${post.author.displayUsername}`}
+                                className="font-semibold hover:underline"
+                            >
+                                {post.author.name}
+                            </Link>
+                            <span className="text-muted-foreground">
+                                @{post.author.displayUsername}
+                            </span>
+                            <span className="text-muted-foreground">·</span>
+                            <span className="text-muted-foreground">
+                                {new Date(post.createdAt).toLocaleDateString()}
+                            </span>
+                        </div>
+
+                        {/* Dropdown menu for Share and Delete */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <EllipsisVerticalIcon size={18} />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onSelect={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    setShareDialogOpen(true)
+                                }}>
+                                    <Share2Icon size={18} /> Share
+                                </DropdownMenuItem>
+                                {!isInitialLoading && isAuth && session?.id == post.userId && (
+                                    <DropdownMenuItem className="text-destructive 
+             data-highlighted:bg-destructive 
+             data-highlighted:text-destructive-foreground" onSelect={(e) => {
+                                            setDeletedDialogOpen(true)
+                                        }}>
+                                        <Trash2Icon /> Delete
+                                    </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
+
+                    {/* Dialog for Share */}
+                    <AlertDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Share the post</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Copy the link given here to share the post with your friends!
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={shareAction}>Share</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+
+                    {/* Dialog for Delete */}
+                    {!isInitialLoading && isAuth && session?.id == post.userId && (
+                        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeletedDialogOpen}>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete this post?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Are you absouloutly sure that you want to delete this post?
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                {/* <AlertDialogContent>
+                                <form>
+                                    <input type="text" disabled value={`${import.meta.env.VITE_FRONTEND_URL}/post/${post.id}`} />
+                                </form>
+                            </AlertDialogContent> */}
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={deleteAction} asChild>
+                                        <Button variant='destructive'>Yes, Delete</Button>
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
 
                     {/* Post Content */}
                     <Link to={`/post/${post.id}`}>

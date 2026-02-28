@@ -5,7 +5,7 @@ import type { APIResponse } from "~/lib/types";
 import { Loader2 } from "lucide-react";
 import PostCard from "~/components/PostCard";
 import { Separator } from "~/components/ui/separator";
-import { Link, NavLink } from "react-router";
+import { NavLink } from "react-router";
 import PostComposer from "~/components/PostComposer";
 
 export function meta({ }: Route.MetaArgs) {
@@ -65,12 +65,10 @@ export default function Home() {
 
           <div className="flex flex-col">
             {data?.map((post: any) => (
-              <NavLink to={`/post/${post.id}`}>
-                <div key={post.id}>
-                  <PostCard post={post} />
-                  <Separator />
-                </div>
-              </NavLink>
+              <div key={post.id}>
+                <PostCard post={post} />
+                <Separator />
+              </div>
             ))}
           </div>
         </main>

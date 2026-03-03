@@ -19,6 +19,23 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogClose,
+    DialogFooter
+} from "~/components/ui/dialog"
+import {
+    Carousel,
+    CarouselContent,
+    CarouselItem,
+    CarouselNext,
+    CarouselPrevious,
+} from "~/components/ui/carousel"
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
 import { EllipsisVerticalIcon, Heart, MessageCircle, Repeat2, Share2Icon, Trash2Icon } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -41,6 +58,7 @@ const PostCard = ({ post }: Props) => {
     const { isInitialLoading, data: session, isAuth } = useMe()
     const shareAction = () => {
         navigator.clipboard.writeText(`${import.meta.env.VITE_FRONTEND_URL}/post/${post.id}`)
+        setShareDialogOpen(false)
         toast.success("Post link has been copied to clipboard!")
     }
     const deleteAction = async () => {
@@ -165,20 +183,20 @@ const PostCard = ({ post }: Props) => {
                     </div>
 
                     {/* Dialog for Share */}
-                    <AlertDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Share the post</AlertDialogTitle>
-                                <AlertDialogDescription>
+                    <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Share the post</DialogTitle>
+                                <DialogDescription>
                                     Copy the link given here to share the post with your friends!
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={shareAction}>Share</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                                </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                                <DialogClose>Cancel</DialogClose>
+                                <Button onClick={shareAction}>Share</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
 
                     {/* Dialog for Delete */}
                     {!isInitialLoading && isAuth && session?.id == post.userId && (
@@ -213,7 +231,39 @@ const PostCard = ({ post }: Props) => {
                     </Link>
 
                     {/* Media */}
-                    {post.media && Array.isArray(post.media) && post.media?.length > 0 && (
+                    {/* Media */}
+                    {post.media && Array.isArray(post.media) && post.media.length > 0 && (
+                        <div className="relative w-full mt-2">
+                            <Carousel className="w-full">
+                                <CarouselContent>
+                                    {post.media.map((media: any, index: number) => (
+                                        <CarouselItem key={index}>
+                                            <div className="rounded-2xl overflow-hidden border">
+                                                {media.type === "image" ? (
+                                                    <img
+                                                        src={media.url}
+                                                        alt="post media"
+                                                        className="w-full max-h-[500px] object-cover"
+                                                    />
+                                                ) : (
+                                                    <video
+                                                        controls
+                                                        className="w-full max-h-[500px] object-cover"
+                                                        src={media.url}
+                                                    />
+                                                )}
+                                            </div>
+                                        </CarouselItem>
+                                    ))}
+                                </CarouselContent>
+
+                                {/* Navigation buttons */}
+                                <CarouselPrevious className="left-2" />
+                                <CarouselNext className="right-2" />
+                            </Carousel>
+                        </div>
+                    )}
+                    {/* {post.media && Array.isArray(post.media) && post.media?.length > 0 && (
                         <div
                             className={`grid gap-2 rounded-2xl overflow-hidden ${post.media.length === 1 ? "grid-cols-1" : "grid-cols-2"
                                 }`}
@@ -236,7 +286,8 @@ const PostCard = ({ post }: Props) => {
                                 </div>
                             ))}
                         </div>
-                    )}
+                    )} */}
+
 
                     {/* Actions */}
                     <div className="flex justify-between max-w-md pt-2">

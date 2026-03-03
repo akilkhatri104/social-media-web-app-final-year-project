@@ -10,9 +10,19 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from './ui/alert-dialog'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogClose
+} from "~/components/ui/dialog"
+import { Button } from './ui/button'
 import { useLocation, useNavigate } from 'react-router'
 import { useMe } from '~/hooks/useMe'
-import ProtectedRoute from './ProtectedRoute'
 
 type Props = {
     open?: boolean
@@ -32,26 +42,26 @@ function VerifyEmailDialog({ open = false }: Props) {
     if (!isAuth) return null
 
     return (
-        <AlertDialog open={dialogOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Verify your email <address></address></AlertDialogTitle>
-                    <AlertDialogDescription>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Verify your email <address></address></DialogTitle>
+                    <DialogDescription>
                         Your email is not verified, do you want to verfiy it right now?
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => {
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <DialogClose onClick={() => {
                         setDialogOpen(false)
                         setDismissed(true)
-                    }}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => {
+                    }}>Cancel</DialogClose>
+                    <Button onClick={() => {
                         navigate('/verify-email')
                         setDialogOpen(false)
-                    }}>Verify Email</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+                    }}>Verify Email</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     )
 }
 

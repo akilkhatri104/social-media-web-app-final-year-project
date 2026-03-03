@@ -20,7 +20,7 @@ import { NavLink, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { queryClient } from '~/lib/react-query'
 import { useMe } from '~/hooks/useMe'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 const MAX_FILE_SIZE = 5000000;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -52,14 +52,7 @@ const formSchema = z.object({
 
 export const SignupForm = () => {
     const navigate = useNavigate()
-    const { data, isError, isPending, isAuth } = useMe()
-
-    useEffect(() => {
-        if (isAuth) {
-            toast.error("User already logged in")
-            navigate('/')
-        }
-    }, [isAuth, navigate])
+    const [isFormDisabled, setIsFormDisabled] = useState(false)
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -69,6 +62,7 @@ export const SignupForm = () => {
 
     async function onSubmit(data: z.infer<typeof formSchema>) {
         try {
+            setIsFormDisabled(true)
             toast("Signing up...")
             console.log(data)
             const response = await api.post<APIResponse>('/api/users/signup', data)
@@ -80,7 +74,7 @@ export const SignupForm = () => {
 
 
             toast.success(response.data.message)
-            queryClient.invalidateQueries({ queryKey: ['user'] })
+            queryClient.invalidateQueries({ queryKey: ['current-user'] })
             navigate('/')
         } catch (error) {
             console.error(error)
@@ -88,10 +82,13 @@ export const SignupForm = () => {
                 toast.error(error.response?.data.message)
             } else
                 toast.error("Unknown error")
+        } finally {
+            setIsFormDisabled(false)
         }
 
     }
-    return isPending ? <h1>Loading...</h1> : (
+
+    return (
         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col p-3 bg-card text-card-foreground rounded-xl w-full md:w-1/3'>
             <div className='text-center'>
                 <h1 className='font-bold text-lg'>Signup</h1>
@@ -217,7 +214,7 @@ export const SignupForm = () => {
                 {image && <img src={URL.createObjectURL(image)} alt="Profile Picture" className='mt-2 h-32 w-32 object-cover rounded' />}
             </FieldSet>
 
-            <Button className='mt-3' type='submit'>Signup</Button>
+            <Button disabled={isFormDisabled} className='mt-3' type='submit'>Signup</Button>
         </form>
     )
 }

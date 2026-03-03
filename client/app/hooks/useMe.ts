@@ -15,7 +15,7 @@ export const fetchCurrentUser = async () => {
 
 export function useMe() {
     const query = useQuery({
-        queryKey: ["user"],
+        queryKey: ["current-user"],
         queryFn: fetchCurrentUser,
         retry: false,
         staleTime: 1000 * 60 * 5, // 5 min

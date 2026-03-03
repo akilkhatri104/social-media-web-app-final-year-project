@@ -11,29 +11,16 @@ import type { APIResponse } from "~/lib/types"
 import axios from "axios"
 
 export function VerifyEmailForm() {
-    const { isAuth, isInitialLoading, data } = useMe()
+    const { data, isInitialLoading } = useMe()
     const [emailSent, setEmailSent] = useState(false)
     const [emailSendPending, setEmailSendPending] = useState(false)
     const [emailOTPPending, setEmailOTPPending] = useState(false)
     const navigate = useNavigate()
 
-    useEffect(() => {
-        if (!isInitialLoading) {
-            if (!isAuth) {
-                toast.error("User not logged in")
-                navigate('/')
-            }
-
-            if (data?.user?.emailVerified) {
-                toast.error("User email already verified")
-                navigate('/')
-            }
-        }
-    }, [isAuth])
 
     async function handleSendEmail() {
         try {
-            toast("Sending OTP...")
+            toast("Sending OTP...", { id: "email-loading" })
             setEmailSendPending(true)
             const response = await api.get<APIResponse>('/api/users/verify-email')
             if (response.status >= 400) {
@@ -51,13 +38,14 @@ export function VerifyEmailForm() {
                 toast.error("Unknown Error")
         } finally {
             setEmailSendPending(false)
+            toast.dismiss("email-loading")
         }
     }
 
     async function handleOTP(formData: FormData) {
         try {
             setEmailOTPPending(true)
-            toast("Verifying OTP...")
+            toast("Verifying OTP...", { id: "otp-loading" })
             const otp = formData.get('otp')
             if (!otp || typeof otp !== 'string' || otp.length !== 6) {
                 toast.error("Not a valid OTP")
@@ -80,11 +68,12 @@ export function VerifyEmailForm() {
                 toast.error("Unknown Error")
         } finally {
             setEmailOTPPending(false)
+            toast.dismiss("otp-loading")
         }
     }
 
     return (
-        <div className="bg-accent-foreground text-accent p-5 rounded-xl">
+        <div className="bg-card p-5 rounded-xl">
             {isInitialLoading ? (
                 <div className="flex flex-col items-center justify-center"><Loader2 className="animate-spin" /> Loading...</div>
             ) : (

@@ -6,10 +6,7 @@ import {
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuGroup,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import {
@@ -21,7 +18,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from "~/components/ui/alert-dialog"
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
 import { EllipsisVerticalIcon, Heart, MessageCircle, Repeat2, Share2Icon, Trash2Icon } from "lucide-react";
@@ -53,7 +49,7 @@ const PostCard = ({ post }: Props) => {
                 toast.error("User either not locked in or not authorized to delete the post")
                 return
             }
-            toast("Deleting the post....")
+            toast.loading("Deleting the post...", { id: "delete-loading" })
 
             const res = await api.delete<APIResponse>(`/api/posts/${post.id}`)
             toast.success(res.data.message)
@@ -61,6 +57,8 @@ const PostCard = ({ post }: Props) => {
             queryClient.invalidateQueries({ queryKey: ['posts'] })
         } catch (error) {
             toast.error(axios.isAxiosError(error) ? error.response?.data.message : "Unknown error while deleting the post")
+        } finally {
+            toast.dismiss("delete-loading")
         }
     }
     const likeMutation = useMutation({
@@ -76,7 +74,12 @@ const PostCard = ({ post }: Props) => {
             queryClient.invalidateQueries({ queryKey: ['post'] })
             queryClient.invalidateQueries({ queryKey: ['posts'] })
             queryClient.invalidateQueries({ queryKey: ['likeStatus', post.id] })
-            toast.success(data.message)
+            toast.success(data.message, {
+                action: {
+                    label: "Undo",
+                    onClick: () => likeMutation.mutate()
+                }
+            })
 
         }
     })

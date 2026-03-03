@@ -1,4 +1,3 @@
-import React from 'react'
 import { Button } from './ui/button'
 import axios from 'axios'
 import { toast } from 'sonner'
@@ -11,20 +10,24 @@ const LogoutButton = () => {
     const navigate = useNavigate()
     async function logoutHandler() {
         try {
-            toast("Logging out....")
+            toast.loading("Logging out....", {
+                id: 'logout-loading'
+            })
             const response = await api.post<APIResponse>('/api/users/logout')
             if (response.status >= 400) {
                 toast.error(response.data.message)
             }
 
             toast.success(response.data.message)
-            queryClient.invalidateQueries({ queryKey: ['user'] })
+            queryClient.invalidateQueries({ queryKey: ['current-user'] })
             navigate('/')
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 toast.error(error.response?.data.message)
             } else
                 toast.error("Unknown error has occured")
+        } finally {
+            toast.dismiss('logout-loading')
         }
     }
     return (

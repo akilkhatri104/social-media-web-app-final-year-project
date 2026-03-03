@@ -1,11 +1,14 @@
 import React from 'react'
+import GuestRoute from '~/components/GuestRoute'
 import { SignupForm } from '~/components/SignupForm'
 
 function signup() {
     return (
         <div>
             <div className='flex justify-center items-center'>
-                <SignupForm />
+                <GuestRoute>
+                    <SignupForm />
+                </GuestRoute>
             </div>
         </div>
     )

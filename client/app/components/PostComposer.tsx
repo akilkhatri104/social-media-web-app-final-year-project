@@ -8,6 +8,7 @@ import { ImagePlus, Loader2, X } from "lucide-react";
 import { useMe } from "~/hooks/useMe";
 import { NavLink, useNavigate } from "react-router";
 import { toast } from "sonner";
+import axios from "axios";
 
 type Props = {
     parentPostId?: number;
@@ -28,19 +29,26 @@ export default function PostComposer({
 
     const mutation = useMutation({
         mutationFn: async () => {
-            const formData = new FormData();
-            formData.append("content", content);
-            if (parentPostId) {
-                formData.append("parentPostId", String(parentPostId));
+            try {
+                toast.loading("Posting...", { id: "post-loading" })
+                const formData = new FormData();
+                formData.append("content", content);
+                if (parentPostId) {
+                    formData.append("parentPostId", String(parentPostId));
+                }
+
+                files.forEach((file) => {
+                    formData.append("media", file);
+                });
+
+                await api.post("/api/posts", formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+            } catch (error) {
+                toast.error(axios.isAxiosError(error) ? error.response?.data.message : "Unknown error")
+            } finally {
+                toast.dismiss("post-loading")
             }
-
-            files.forEach((file) => {
-                formData.append("media", file);
-            });
-
-            await api.post("/api/posts", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
         },
         onSuccess: () => {
             setContent("");

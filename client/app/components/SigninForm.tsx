@@ -20,7 +20,7 @@ import { NavLink, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { queryClient } from '~/lib/react-query'
 import { useMe } from '~/hooks/useMe'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 
 const formSchema = z.object({
@@ -36,15 +36,7 @@ const formSchema = z.object({
 
 export const SigninForm = () => {
     const navigate = useNavigate()
-    const { data, isError, isPending, isAuth } = useMe()
-
-    useEffect(() => {
-        if (isAuth) {
-            toast.error("User already logged in")
-            navigate('/')
-        }
-    }, [isAuth, navigate])
-
+    const [isFormDisabled, setIsFormDisabled] = useState(false)
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -52,7 +44,8 @@ export const SigninForm = () => {
 
     async function onSubmit(data: z.infer<typeof formSchema>) {
         try {
-            toast('Signing in...')
+            setIsFormDisabled(true)
+            toast.loading('Signing in...', { id: "signin-loading" })
             console.log(data)
             const response = await api.post<APIResponse>('/api/users/signin', data)
             console.log(response)
@@ -63,7 +56,7 @@ export const SigninForm = () => {
 
 
             toast.success(response.data.message)
-            queryClient.invalidateQueries({ queryKey: ['user'] })
+            queryClient.invalidateQueries({ queryKey: ['current-user'] })
             navigate('/')
         } catch (error) {
             console.error(error)
@@ -71,10 +64,13 @@ export const SigninForm = () => {
                 toast.error(error.response?.data.message)
             } else
                 toast.error("Unknown error")
+        } finally {
+            setIsFormDisabled(false)
+            toast.dismiss("signin-loading")
         }
 
     }
-    return isPending ? <h1>Loading...</h1> : (
+    return (
         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col p-3 bg-card text-card-foreground rounded-xl w-full md:w-1/3'>
             <div className='text-center'>
                 <h1 className='font-bold text-lg'>Signin</h1>
@@ -96,7 +92,7 @@ export const SigninForm = () => {
                                 autoComplete="off"
                             />
                             <FieldDescription>
-                                Create a unique username
+                                Enter your username or email
                             </FieldDescription>
                             {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                         </Field>
@@ -120,7 +116,7 @@ export const SigninForm = () => {
                                 type='password'
                             />
                             <FieldDescription>
-                                Create a strong password
+                                Enter your password
                             </FieldDescription>
                             {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                         </Field>
@@ -128,7 +124,7 @@ export const SigninForm = () => {
                 />
             </FieldSet>
 
-            <Button className='mt-3' type='submit'>Signin</Button>
+            <Button className='mt-3' type='submit' disabled={isFormDisabled}>Signin</Button>
         </form>
     )
 }

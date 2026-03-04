@@ -1,12 +1,21 @@
-import { useParams, Link, NavLink } from "react-router";
+import { useParams, Link, NavLink, useLoaderData } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import PostCard from "~/components/PostCard";
 import PostComposer from "../components/PostComposer";
 import { Loader2 } from "lucide-react";
 import { Separator } from "~/components/ui/separator";
+import type { Route } from "./+types/post.$id";
+import { useEffect } from "react";
+
+export async function clientLoader({ params }: Route.ClientActionArgs) {
+    const res = await api.get(`/api/posts/${params.id}`);
+    return res.data.data;
+}
+
 
 export default function PostPage() {
+    const initialData = useLoaderData<typeof clientLoader>()
     const { id } = useParams();
 
     const { data, isPending } = useQuery({
@@ -15,7 +24,14 @@ export default function PostPage() {
             const res = await api.get(`/api/posts/${id}`);
             return res.data.data;
         },
+        initialData
     });
+
+    useEffect(() => {
+        if (data) {
+            document.title = `${data.author.name}: ${data.content.slice(0, 40)}...`;
+        }
+    }, [data])
 
     if (isPending) {
         return (

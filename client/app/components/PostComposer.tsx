@@ -29,26 +29,23 @@ export default function PostComposer({
 
     const mutation = useMutation({
         mutationFn: async () => {
-            try {
-                toast.loading("Posting...", { id: "post-loading" })
-                const formData = new FormData();
-                formData.append("content", content);
-                if (parentPostId) {
-                    formData.append("parentPostId", String(parentPostId));
-                }
-
-                files.forEach((file) => {
-                    formData.append("media", file);
-                });
-
-                await api.post("/api/posts", formData, {
-                    headers: { "Content-Type": "multipart/form-data" },
-                });
-            } catch (error) {
-                toast.error(axios.isAxiosError(error) ? error.response?.data.message : "Unknown error")
-            } finally {
-                toast.dismiss("post-loading")
+            toast.loading("Posting...", { id: "post-loading" })
+            const formData = new FormData();
+            formData.append("content", content);
+            if (parentPostId) {
+                formData.append("parentPostId", String(parentPostId));
             }
+
+            files.forEach((file) => {
+                formData.append("media", file);
+            });
+
+            await api.post("/api/posts", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+        },
+        onError: (err) => {
+            toast.error(axios.isAxiosError(err) ? err.response?.data.message : "Unknown error")
         },
         onSuccess: () => {
             setContent("");
@@ -58,6 +55,10 @@ export default function PostComposer({
             navigate(`/`)
             toast.success("Posted Successfully")
         },
+        onSettled: () => {
+            toast.dismiss("post-loading")
+        }
+
     });
 
     const removeFile = (index: number) => {

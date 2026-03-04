@@ -47,6 +47,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { useState } from "react";
 import { useMe } from "~/hooks/useMe";
+import PostComposer from "./PostComposer";
 
 type Props = {
     post: any;
@@ -291,7 +292,7 @@ const PostCard = ({ post }: Props) => {
 
                     {/* Actions */}
                     <div className="flex justify-between max-w-md pt-2">
-                        <Button
+                        {/* <Button
                             variant="ghost"
                             size="sm"
                             className="flex items-center gap-2 text-muted-foreground"
@@ -301,7 +302,25 @@ const PostCard = ({ post }: Props) => {
                                 <MessageCircle size={18} />
                                 {post.commentCount}
                             </NavLink>
-                        </Button>
+                        </Button> */}
+                        <Dialog>
+                            <DialogTrigger asChild >
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex items-center gap-2 text-muted-foreground"
+                                >
+                                    <MessageCircle size={18} />
+                                    {post.commentCount}
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Post a reply</DialogTitle>
+                                </DialogHeader>
+                                <PostComposer parentPostId={post.parentPostId} />
+                            </DialogContent>
+                        </Dialog>
 
                         {/* <Button
                             variant="ghost"

@@ -5,6 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
 } from "react-router";
 
 import type { Route } from "./+types/root";
@@ -15,6 +16,9 @@ import { Toaster } from "./components/ui/sonner";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/react-query";
 import VerifyEmailDialog from "./components/VerifyEmailDialog";
+import { SidebarProvider, SidebarTrigger } from "./components/ui/sidebar";
+import { AppSidebar } from "./components/AppSidebar";
+import { useMe } from "./hooks/useMe";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -31,36 +35,36 @@ export const links: Route.LinksFunction = () => [
 
 
 
-export function Layout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <Meta />
-        <Links />
-      </head>
-      <body className="min-h-screen bg-muted/40">
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <Header />
-            <VerifyEmailDialog />
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        </QueryClientProvider>
-        <ScrollRestoration />
-        <Scripts />
-      </body>
-    </html>
-  );
-}
+// export function Layout({ children }: { children: React.ReactNode }) {
+//   return (
+//     <html lang="en">
+//       <head>
+//         <meta charSet="utf-8" />
+//         <meta name="viewport" content="width=device-width, initial-scale=1" />
+//         <Meta />
+//         <Links />
+//       </head>
+//       <body className="min-h-screen bg-muted/40">
+//         <main>
+//           {children}
+//         </main>
+//         <ScrollRestoration />
+//         <Scripts />
+//       </body>
+//     </html>
+//   );
+// }
 
 export default function App() {
   return (
-    <div>
-      <Outlet />
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <SidebarProvider>
+        <ThemeProvider>
+          <Outlet />
+          <Toaster />
+        </ThemeProvider>
+      </SidebarProvider>
+    </QueryClientProvider>
   )
 }
 

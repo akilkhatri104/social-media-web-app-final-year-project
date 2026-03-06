@@ -2,11 +2,26 @@ import type { Route } from "./+types/home";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import type { APIResponse } from "~/lib/types";
-import { Loader2 } from "lucide-react";
+import { HomeIcon, Loader2 } from "lucide-react";
 import PostCard from "~/components/PostCard";
 import { Separator } from "~/components/ui/separator";
 import { NavLink } from "react-router";
 import PostComposer from "~/components/PostComposer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+  DialogFooter
+} from "~/components/ui/dialog"
+import { Button } from "~/components/ui/button";
+import ProtectedRoute from "~/components/ProtectedRoute";
+import { useEffect, useState } from "react";
+import { queryClient } from "~/lib/react-query";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -16,13 +31,33 @@ export function meta({ }: Route.MetaArgs) {
 }
 
 export default function Home() {
-  const { data, isPending, isError } = useQuery({
-    queryKey: ["posts"],
+  const [tab, setTab] = useState('for-you')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    const savedTab = sessionStorage.getItem("default-tab")
+    if (savedTab) {
+      setTab(savedTab)
+    }
+    setMounted(true)
+  }, [])
+
+  const {
+    data,
+    isPending,
+    isFetching,
+    isError,
+  } = useQuery({
+    queryKey: ["feed", tab],
     queryFn: async () => {
-      const res = await api.get<APIResponse>("/api/feed/simple-for-you");
+      const res = await api.get<APIResponse>(`/api/feed/${tab}`);
       return res.data.data;
     },
+    enabled: mounted,
   });
+
+
+
 
   if (isPending) {
     return (
@@ -41,49 +76,65 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto flex">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-background">
 
-        {/* LEFT SIDEBAR */}
-        <aside className="hidden md:flex w-1/4 h-screen sticky top-0 border-r p-6 flex-col gap-6">
-          <h1 className="text-2xl font-bold">PU Connect</h1>
-          <nav className="flex flex-col gap-4 text-muted-foreground">
-            <p className="hover:text-foreground cursor-pointer">Home</p>
-            <p className="hover:text-foreground cursor-pointer">Explore</p>
-            <p className="hover:text-foreground cursor-pointer">Profile</p>
-          </nav>
-        </aside>
+        <main className="w-full min-h-screen flex flex-col">
 
-        {/* CENTER FEED */}
-        <main className="flex-1 border-r min-h-screen">
-          <div className="sticky top-0 bg-background/80 backdrop-blur-md border-b p-4 z-10">
-            <h2 className="text-xl font-semibold">Home</h2>
+          {/* Header Tabs */}
+          <div className="sticky top-0 w-full bg-background/80 backdrop-blur-md border-b p-4 z-10">
+            <Tabs value={tab} onValueChange={(value) => {
+              sessionStorage.setItem("default-tab", value)
+              setTab(value)
+            }}>
+              <TabsList className="w-full" variant="line">
+                <TabsTrigger value="for-you">For You</TabsTrigger>
+                <TabsTrigger value="following">Following</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
-          <PostComposer />
-          <Separator />
+          <div className="w-full">
+            <PostComposer />
+            <Separator />
+          </div>
 
-          <div className="flex flex-col">
-            {data?.map((post: any) => (
-              <div key={post.id}>
-                <PostCard post={post} />
-                <Separator />
+          {/* Feed */}
+          <div className="w-full flex flex-col">
+
+            {/* Refetch Loader */}
+            {isFetching && !isPending && (
+              <div className="flex justify-center py-4">
+                <Loader2 className="animate-spin w-5 h-5 text-primary" />
               </div>
-            ))}
+            )}
+
+            {/* Empty State */}
+            {data && data.length === 0 && !isPending ? (
+              <div className="flex flex-1 items-center justify-center w-full text-center py-20">
+                <div>
+                  <p className="text-muted-foreground text-lg font-medium">
+                    No posts yet
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Follow people or create a post to see content here.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full">
+                {data?.map((post: any) => (
+                  <div key={post.id} className="w-full">
+                    <PostCard post={post} />
+                    <Separator />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
         </main>
-
-        {/* RIGHT SIDEBAR */}
-        <aside className="hidden lg:flex w-1/4 h-screen sticky top-0 p-6">
-          <div className="bg-muted p-4 rounded-2xl w-full">
-            <h3 className="font-semibold mb-2">Trends for you</h3>
-            <p className="text-sm text-muted-foreground">#React</p>
-            <p className="text-sm text-muted-foreground">#PUConnect</p>
-            <p className="text-sm text-muted-foreground">#WebDevelopment</p>
-          </div>
-        </aside>
-
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

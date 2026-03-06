@@ -9,7 +9,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         if (!isInitialLoading && !isAuth) {
-            navigate('/')
+            navigate('/signin')
         }
     }, [isAuth, isInitialLoading, navigate])
 

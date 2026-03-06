@@ -9,7 +9,7 @@ const GuestRoute = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         if (!isInitialLoading && isAuth) {
-            navigate('/')
+            navigate('/home')
         }
     }, [isAuth, isInitialLoading, navigate])
 

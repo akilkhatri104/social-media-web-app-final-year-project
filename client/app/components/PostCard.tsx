@@ -176,7 +176,7 @@ const PostCard = ({ post }: Props) => {
              data-highlighted:text-destructive-foreground" onSelect={(e) => {
                                             setDeletedDialogOpen(true)
                                         }}>
-                                        <Trash2Icon /> Delete
+                                        <Trash2Icon color="white" className="text-destructive" /> Delete
                                     </DropdownMenuItem>
                                 )}
                             </DropdownMenuContent>

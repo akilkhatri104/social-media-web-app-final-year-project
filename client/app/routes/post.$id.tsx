@@ -9,8 +9,12 @@ import type { Route } from "./+types/post.$id";
 import { useEffect } from "react";
 
 export async function clientLoader({ params }: Route.ClientActionArgs) {
-    const res = await api.get(`/api/posts/${params.id}`);
-    return res.data.data;
+    try {
+        const res = await api.get(`/api/posts/${params.id}`);
+        return res.data.data;
+    } catch (error) {
+        return null
+    }
 }
 
 
@@ -28,8 +32,10 @@ export default function PostPage() {
     });
 
     useEffect(() => {
-        if (data) {
+        if (!isPending && data) {
             document.title = `${data.author.name}: ${data.content.slice(0, 40)}...`;
+        } else {
+            document.title = `Post not found`
         }
     }, [data])
 
@@ -46,15 +52,15 @@ export default function PostPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background">
-            <div className="max-w-2xl mx-auto border-x min-h-screen">
+        <div className="min-h-screeno w-full bg-background">
+            <div className="border-x min-h-screen">
 
                 {/* Header */}
-                <div className="sticky top-0 bg-background/80 backdrop-blur-md border-b p-4">
+                {/* <div className="sticky top-0 bg-background/80 backdrop-blur-md border-b p-4">
                     <Link to="/" className="text-primary font-semibold">
                         ← Back
                     </Link>
-                </div>
+                </div> */}
 
                 {/* Main Post */}
                 <PostCard post={data} />

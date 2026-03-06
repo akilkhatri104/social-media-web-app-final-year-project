@@ -11,7 +11,7 @@ export function meta({ }: Route.MetaArgs) {
     ];
 }
 
-function signup() {
+function signin() {
     return (
         <div className='flex justify-center items-center'>
             <GuestRoute>
@@ -21,4 +21,4 @@ function signup() {
     )
 }
 
-export default signup
+export default signin

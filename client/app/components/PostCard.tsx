@@ -288,7 +288,7 @@ const PostCard = ({ post }: Props) => {
 
 
                     {/* Actions */}
-                    <div className="flex justify-between max-w-md pt-2">
+                    <div className="flex justify-between p-2">
                         {/* <Button
                             variant="ghost"
                             size="sm"

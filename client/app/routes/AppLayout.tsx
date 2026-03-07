@@ -1,5 +1,6 @@
 import { Outlet, Navigate, useLocation } from "react-router"
 import { AppSidebar } from "~/components/AppSidebar"
+import { ExploreSidebar } from "~/components/ExploreSidebar"
 import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar"
 import { useMe } from "~/hooks/useMe"
 import VerifyEmailDialog from "../components/VerifyEmailDialog"
@@ -16,11 +17,18 @@ export default function AppLayout() {
 
     return (
         <SidebarProvider>
-            <div className="flex w-full min-w-screen min-h-screen">
+            <div className="flex min-h-screen w-full min-w-screen bg-background">
                 <AppSidebar />
-                <main className="flex-1 min-w-0 w-full">
-                    <SidebarTrigger />
-                    <Outlet />
+                <main className="flex min-w-0 flex-1 flex-col">
+                    <div className="sticky top-0 z-20 flex items-center border-b bg-background/95 px-4 py-3 backdrop-blur md:hidden">
+                        <SidebarTrigger />
+                    </div>
+                    <div className="flex min-w-0 flex-1">
+                        <div className="min-w-0 flex-1">
+                            <Outlet />
+                        </div>
+                        <ExploreSidebar />
+                    </div>
                 </main>
 
             </div>

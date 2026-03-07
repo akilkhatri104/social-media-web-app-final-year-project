@@ -1,4 +1,4 @@
-import { eq, and, count } from 'drizzle-orm';
+import { eq, and, count, inArray } from 'drizzle-orm';
 import { user } from '../lib/auth-schema.ts';
 import { db } from '../lib/db/client.ts';
 import { AppError } from '../middlewares/errorHandler.ts';
@@ -13,7 +13,7 @@ export async function toggleFollow(req: Request, res: Response) {
     }
 
     const { followingId } = req.params;
-    if (!followingId || followingId !== 'string') {
+    if (!followingId || typeof followingId !== 'string') {
       throw new AppError('user id not provided to follow', 400);
     }
 
@@ -83,13 +83,12 @@ export async function getFollowerCountByUserId(req: Request, res: Response) {
     if (!userId || typeof userId !== 'string') {
       throw new AppError('No user ID provided', 400);
     }
-    const userExists = await db
-      .select()
-      .from(user)
-      .where(eq(user.id, userId))
-      .limit(1);
 
-    if (!userExists || userExists.length == 0) {
+    const userExists = await db.query.user.findFirst({
+      where: eq(user.id, userId),
+    });
+
+    if (!userExists) {
       throw new AppError('User with ID not found', 404);
     }
 
@@ -115,28 +114,102 @@ export async function getFollowingCountByUserId(req: Request, res: Response) {
     if (!userId || typeof userId !== 'string') {
       throw new AppError('No user ID provided', 400);
     }
-    const userExists = await db
-      .select()
-      .from(user)
-      .where(eq(user.id, userId))
-      .limit(1);
 
-    if (!userExists || userExists.length == 0) {
+    const userExists = await db.query.user.findFirst({
+      where: eq(user.id, userId),
+    });
+
+    if (!userExists) {
       throw new AppError('User with ID not found', 404);
     }
 
-    const followers = await db
+    const following = await db
       .select({ count: count() })
       .from(follow)
       .where(eq(follow.followerId, userId));
 
     return res.status(200).json(
       new APIResponse('Following count fetched', 200, {
-        count: followers[0]?.count,
+        count: following[0]?.count,
       }),
     );
   } catch (error) {
     console.error('getFollowingCountByUserId :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}
+export async function getFollowersByUserId(req: Request, res: Response) {
+  try {
+    const { userId } = req.params;
+    if (!userId || typeof userId !== 'string') {
+      throw new AppError('No user ID provided', 400);
+    }
+
+    const userExists = await db.query.user.findFirst({
+      where: eq(user.id, userId),
+    });
+
+    if (!userExists) {
+      throw new AppError('User with ID not found', 404);
+    }
+
+    const followersIdObj = await db
+      .select({ id: follow.followerId })
+      .from(follow)
+      .where(eq(follow.followingId, userId));
+
+    const followerId = followersIdObj.map((item) => item.id);
+
+    const followers = await db.query.user.findMany({
+      where: inArray(user.id, followerId),
+    });
+
+    return res.status(200).json(
+      new APIResponse('Followers fetched', 200, {
+        followers,
+        count: followers.length,
+      }),
+    );
+  } catch (error) {
+    console.error('getFollowersByUserId :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}
+
+export async function getFollowingByUserId(req: Request, res: Response) {
+  try {
+    const { userId } = req.params;
+    if (!userId || typeof userId !== 'string') {
+      throw new AppError('No user ID provided', 400);
+    }
+
+    const userExists = await db.query.user.findFirst({
+      where: eq(user.id, userId),
+    });
+
+    if (!userExists) {
+      throw new AppError('User with ID not found', 404);
+    }
+
+    const followingIdObj = await db
+      .select({ id: follow.followingId })
+      .from(follow)
+      .where(eq(follow.followerId, userId));
+
+    const followingId = followingIdObj.map((item) => item.id);
+
+    const following = await db.query.user.findMany({
+      where: inArray(user.id, followingId),
+    });
+
+    return res.status(200).json(
+      new APIResponse('Following fetched', 200, {
+        following,
+        count: following.length,
+      }),
+    );
+  } catch (error) {
+    console.error('getFollowingByUserId :: ', error);
     throw error instanceof AppError ? error : new AppError();
   }
 }

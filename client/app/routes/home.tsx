@@ -42,6 +42,10 @@ export default function Home() {
     setMounted(true)
   }, [])
 
+  useEffect(() => {
+    document.title = `Home / ${tab}`
+  }, [tab])
+
   const {
     data,
     isPending,

@@ -25,6 +25,7 @@ export async function getFollowingFeed(req: Request, res: Response) {
           with: { media: true, likes: true },
           orderBy: desc(post.updatedAt),
         },
+        author: true,
       },
       orderBy: desc(post.updatedAt),
     });

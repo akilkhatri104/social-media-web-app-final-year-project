@@ -56,7 +56,9 @@ export async function toggleFollow(req: Request, res: Response) {
         throw new AppError('Error while unfollowing user', 500);
       }
 
-      return res.status(200).json(new APIResponse('User unfollowd', 200));
+      return res
+        .status(200)
+        .json(new APIResponse('User unfollowd', 200, { isFollowing: false }));
     }
 
     const followCreated = await db.insert(follow).values({
@@ -68,9 +70,11 @@ export async function toggleFollow(req: Request, res: Response) {
       throw new AppError('Error while following user', 500);
     }
 
-    return res
-      .status(201)
-      .json(new APIResponse('User followed successfully', 201));
+    return res.status(201).json(
+      new APIResponse('User followed successfully', 201, {
+        isFollowing: true,
+      }),
+    );
   } catch (error) {
     console.error('toggleFollow :: ', error);
     throw error instanceof AppError ? error : new AppError();
@@ -210,6 +214,45 @@ export async function getFollowingByUserId(req: Request, res: Response) {
     );
   } catch (error) {
     console.error('getFollowingByUserId :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}
+
+export async function getFollowStatusByUserId(req: Request, res: Response) {
+  try {
+    if (!req.session) {
+      throw new AppError(
+        'User needs to be logged in to check follow status',
+        401,
+      );
+    }
+
+    const { userId } = req.params;
+    if (!userId) {
+      throw new AppError('No or invalid userID provided', 400);
+    }
+
+    const userExists = await db.query.user.findFirst({
+      where: eq(user.id, userId),
+    });
+    if (!user) {
+      throw new AppError('User with give userId not found', 404);
+    }
+
+    const followExists = await db.query.follow.findFirst({
+      where: and(
+        eq(follow.followerId, req.session.user.id),
+        eq(follow.followingId, userId),
+      ),
+    });
+
+    return res.status(200).json(
+      new APIResponse('Follow status fetched', 200, {
+        isFollowing: !!followExists,
+      }),
+    );
+  } catch (error) {
+    console.error('getFollowStatus :: ', error);
     throw error instanceof AppError ? error : new AppError();
   }
 }

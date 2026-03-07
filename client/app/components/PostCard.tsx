@@ -48,6 +48,7 @@ import axios from "axios";
 import { useState } from "react";
 import { useMe } from "~/hooks/useMe";
 import PostComposer from "./PostComposer";
+import FollowButton from "./FollowButton";
 
 type Props = {
     post: any;
@@ -154,30 +155,34 @@ const PostCard = ({ post }: Props) => {
                             </span>
                         </div>
 
-                        {/* Dropdown menu for Share and Delete */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <EllipsisVerticalIcon size={18} />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem onSelect={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    setShareDialogOpen(true)
-                                }}>
-                                    <Share2Icon size={18} /> Share
-                                </DropdownMenuItem>
-                                {!isInitialLoading && isAuth && session?.id == post.userId && (
-                                    <DropdownMenuItem className="text-destructive 
+                        <div className="flex justify-center items-center">
+                            <FollowButton userId={post.author.id} />
+
+                            {/* Dropdown menu for Share and Delete */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <EllipsisVerticalIcon size={18} />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onSelect={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        setShareDialogOpen(true)
+                                    }}>
+                                        <Share2Icon size={18} /> Share
+                                    </DropdownMenuItem>
+                                    {!isInitialLoading && isAuth && session?.id == post.userId && (
+                                        <DropdownMenuItem className="text-destructive 
              data-highlighted:bg-destructive 
              data-highlighted:text-destructive-foreground" onSelect={(e) => {
-                                            setDeletedDialogOpen(true)
-                                        }}>
-                                        <Trash2Icon color="white" className="text-destructive" /> Delete
-                                    </DropdownMenuItem>
-                                )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                                setDeletedDialogOpen(true)
+                                            }}>
+                                            <Trash2Icon color="white" className="text-destructive" /> Delete
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
 
                     {/* Dialog for Share */}

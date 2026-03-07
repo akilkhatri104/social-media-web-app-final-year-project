@@ -52,24 +52,29 @@ export const media = p.pgTable('media', {
     .notNull(),
 });
 
-export const follow = p.pgTable('follow', {
-  id: p.serial('id').primaryKey(),
-  followerId: p
-    .text('followerId')
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  followingId: p
-    .text('followingId')
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  createdAt: p.timestamp('created_at').defaultNow().notNull(),
-  updatedAt: p
-    .timestamp('updated_at')
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});
+export const follow = p.pgTable(
+  'follow',
+  {
+    id: p.serial('id').primaryKey(),
+    followerId: p
+      .text('followerId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    followingId: p
+      .text('followingId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    createdAt: p.timestamp('created_at').defaultNow().notNull(),
+    updatedAt: p
+      .timestamp('updated_at')
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (t) => [unique().on(t.followerId, t.followingId)],
+);
 
 import { relations, sql } from 'drizzle-orm';
+import { unique } from 'drizzle-orm/gel-core';
 
 // 1. Post Relations (Connects posts to media, likes, and itself for comments)
 export const postRelations = relations(post, ({ one, many }) => ({

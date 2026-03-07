@@ -78,7 +78,6 @@ export function AppSidebar() {
                     <DialogTrigger asChild >
                         <Button
                             className="flex items-center gap-2"
-
                         >
                             Post
                         </Button>
@@ -90,7 +89,7 @@ export function AppSidebar() {
                         <PostComposer />
                     </DialogContent>
                 </Dialog>
-                <LogoutButton />
+                <LogoutButton variant="outline" />
                 <SidebarGroup />
             </SidebarContent>
             <SidebarFooter />

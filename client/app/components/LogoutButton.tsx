@@ -6,7 +6,11 @@ import type { APIResponse } from '~/lib/types'
 import { useNavigate } from 'react-router'
 import { queryClient, queryKeys } from '~/lib/react-query'
 
-const LogoutButton = () => {
+type Props = {
+    variant?: "link" | "default" | "outline" | "secondary" | "ghost" | "destructive" | null | undefined
+}
+
+const LogoutButton = ({ variant }: Props) => {
     const navigate = useNavigate()
     async function logoutHandler() {
         try {
@@ -31,7 +35,7 @@ const LogoutButton = () => {
         }
     }
     return (
-        <Button onClick={logoutHandler}>Logout</Button>
+        <Button variant={variant} onClick={logoutHandler}>Logout</Button>
     )
 }
 

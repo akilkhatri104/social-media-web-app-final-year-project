@@ -18,7 +18,7 @@ import { toast } from 'sonner'
 import axios from 'axios'
 import { NavLink, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { queryClient } from '~/lib/react-query'
+import { queryClient, queryKeys } from '~/lib/react-query'
 import { useMe } from '~/hooks/useMe'
 import { useEffect, useState } from 'react'
 
@@ -56,7 +56,7 @@ export const SigninForm = () => {
 
 
             toast.success(response.data.message)
-            queryClient.invalidateQueries({ queryKey: ['current-user'] })
+            queryClient.invalidateQueries({ queryKey: queryKeys.auth.me })
             navigate('/')
         } catch (error) {
             console.error(error)

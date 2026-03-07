@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { api } from "~/lib/axios";
+import { queryKeys } from "~/lib/react-query";
 import type { APIResponse } from "~/lib/types";
 
 export const fetchCurrentUser = async () => {
@@ -15,7 +16,7 @@ export const fetchCurrentUser = async () => {
 
 export function useMe() {
     const query = useQuery({
-        queryKey: ["current-user"],
+        queryKey: queryKeys.auth.me,
         queryFn: fetchCurrentUser,
         retry: false,
         staleTime: 1000 * 60 * 5, // 5 min

@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { api } from '~/lib/axios'
 import type { APIResponse } from '~/lib/types'
 import { useNavigate } from 'react-router'
-import { queryClient } from '~/lib/react-query'
+import { queryClient, queryKeys } from '~/lib/react-query'
 
 const LogoutButton = () => {
     const navigate = useNavigate()
@@ -19,7 +19,7 @@ const LogoutButton = () => {
             }
 
             toast.success(response.data.message)
-            queryClient.invalidateQueries({ queryKey: ['current-user'] })
+            queryClient.invalidateQueries({ queryKey: queryKeys.auth.me })
             navigate('/')
         } catch (error) {
             if (axios.isAxiosError(error)) {

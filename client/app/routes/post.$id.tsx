@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { Separator } from "~/components/ui/separator";
 import type { Route } from "./+types/post.$id";
 import { useEffect } from "react";
+import { queryKeys } from "~/lib/react-query";
 
 export async function clientLoader({ params }: Route.ClientActionArgs) {
     try {
@@ -23,7 +24,7 @@ export default function PostPage() {
     const { id } = useParams();
 
     const { data, isPending } = useQuery({
-        queryKey: ["post", id],
+        queryKey: queryKeys.posts.detail(id),
         queryFn: async () => {
             const res = await api.get(`/api/posts/${id}`);
             return res.data.data;

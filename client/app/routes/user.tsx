@@ -4,6 +4,7 @@ import { Loader2, Loader2Icon } from 'lucide-react'
 import React from 'react'
 import { useParams } from 'react-router'
 import { api } from '~/lib/axios'
+import { queryKeys } from '~/lib/react-query'
 import type { APIResponse } from '~/lib/types'
 
 type Props = {}
@@ -11,7 +12,7 @@ type Props = {}
 function User({ }: Props) {
     const { username } = useParams()
     const { data: user, isError, isPending, error } = useQuery({
-        queryKey: ['user', username],
+        queryKey: queryKeys.users.byUsername(username),
         queryFn: async () => {
             const res = await api.get<APIResponse>(`/api/users/${username}`)
             return res.data.data

@@ -6,6 +6,7 @@ import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { useMe } from "~/hooks/useMe";
+import { queryKeys } from "~/lib/react-query";
 import { NavLink, useNavigate } from "react-router";
 import { toast } from "sonner";
 import axios from "axios";
@@ -50,8 +51,7 @@ export default function PostComposer({
         onSuccess: () => {
             setContent("");
             setFiles([]);
-            queryClient.invalidateQueries({ queryKey: ["posts"] });
-            queryClient.invalidateQueries({ queryKey: ["post"] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
             navigate(`/`)
             toast.success("Posted Successfully")
         },

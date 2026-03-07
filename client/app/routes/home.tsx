@@ -21,7 +21,7 @@ import {
 import { Button } from "~/components/ui/button";
 import ProtectedRoute from "~/components/ProtectedRoute";
 import { useEffect, useState } from "react";
-import { queryClient } from "~/lib/react-query";
+import { queryKeys } from "~/lib/react-query";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -48,7 +48,7 @@ export default function Home() {
     isFetching,
     isError,
   } = useQuery({
-    queryKey: ["feed", tab],
+    queryKey: queryKeys.posts.feed(tab),
     queryFn: async () => {
       const res = await api.get<APIResponse>(`/api/feed/${tab}`);
       return res.data.data;

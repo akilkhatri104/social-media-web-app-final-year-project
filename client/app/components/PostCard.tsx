@@ -41,7 +41,7 @@ import { EllipsisVerticalIcon, Heart, MessageCircle, Repeat2, Share2Icon, Trash2
 import { Button } from "~/components/ui/button";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
-import { queryClient } from "~/lib/react-query";
+import { queryClient, queryKeys } from "~/lib/react-query";
 import type { APIResponse } from "~/lib/types";
 import { toast } from "sonner";
 import axios from "axios";
@@ -72,8 +72,7 @@ const PostCard = ({ post }: Props) => {
 
             const res = await api.delete<APIResponse>(`/api/posts/${post.id}`)
             toast.success(res.data.message)
-            queryClient.invalidateQueries({ queryKey: ['post', post.id] })
-            queryClient.invalidateQueries({ queryKey: ['posts'] })
+            queryClient.invalidateQueries({ queryKey: queryKeys.posts.all })
         } catch (error) {
             toast.error(axios.isAxiosError(error) ? error.response?.data.message : "Unknown error while deleting the post")
         } finally {
@@ -90,9 +89,7 @@ const PostCard = ({ post }: Props) => {
             toast.error(axios.isAxiosError(err) ? err?.response?.data.message : "An unknown error")
         },
         onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ['post'] })
-            queryClient.invalidateQueries({ queryKey: ['posts'] })
-            queryClient.invalidateQueries({ queryKey: ['likeStatus', post.id] })
+            queryClient.invalidateQueries({ queryKey: queryKeys.posts.all })
             toast.success(data.message, {
                 action: {
                     label: "Undo",
@@ -107,7 +104,7 @@ const PostCard = ({ post }: Props) => {
             const response = await api.get<APIResponse>(`/api/likes/likeStatus/${post.id}`)
             return !!response.data.data?.likeStatus
         },
-        queryKey: ['likeStatus', post.id],
+        queryKey: queryKeys.posts.likeStatus(post.id),
     })
     return (
         <Card className="border-0 rounded-none hover:bg-card/40 transition cursor-pointer">

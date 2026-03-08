@@ -82,6 +82,11 @@ const PostCard = ({ post }: Props) => {
     }
     const likeMutation = useMutation({
         mutationFn: async () => {
+            if (likeStatus) {
+                toast.loading("Unliking post...", { id: "ilke-loading" })
+            } else {
+                toast.loading("Liking post...", { id: "like-loading" })
+            }
             const response = await api.post<APIResponse>(`/api/likes/${post.id}`)
 
             return response.data
@@ -98,6 +103,9 @@ const PostCard = ({ post }: Props) => {
                 }
             })
 
+        },
+        onSettled: () => {
+            toast.dismiss("like-loading")
         }
     })
     const { data: likeStatus, isPending } = useQuery({
@@ -336,7 +344,9 @@ const PostCard = ({ post }: Props) => {
                             variant="ghost"
                             size="sm"
                             className="flex items-center gap-2 text-muted-foreground"
-                            onClick={() => likeMutation.mutate()}
+                            onClick={() => {
+                                likeMutation.mutate()
+                            }}
                         >
                             <Heart size={18} fill={!isPending && likeStatus ? "red" : undefined} />
                             {post.likeCount}

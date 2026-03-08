@@ -23,21 +23,29 @@ export async function createPost(req: Request, res: Response) {
       );
     }
 
-    const { parentPostId, content, visibility } = req.body;
+    const { parentPostId, content, visibility, quotedPostId } = req.body;
 
     if (!content) {
       throw new AppError('Post needs content', 400);
     }
 
     if (parentPostId) {
-      const [parentPost] = await db
-        .select()
-        .from(post)
-        .where(eq(parentPostId, post.id))
-        .limit(1);
+      const parentPost = await db.query.post.findFirst({
+        where: eq(parentPostId, post.id),
+      });
 
       if (!parentPost) {
-        throw new AppError('Invalid parent post id provided', 400);
+        throw new AppError('No post found with provided parent post id', 404);
+      }
+    }
+
+    if (quotedPostId) {
+      const quotedPost = await db.query.post.findFirst({
+        where: eq(quotedPostId, post.id),
+      });
+
+      if (!quotedPost) {
+        throw new AppError('No post found with provided quouted post id', 404);
       }
     }
 
@@ -46,6 +54,7 @@ export async function createPost(req: Request, res: Response) {
       .values({
         userId: req.session.user.id,
         parentPostId,
+        quotedPostId,
         content,
         visibility,
       })

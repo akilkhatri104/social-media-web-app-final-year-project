@@ -5,6 +5,7 @@ import { toNodeHandler } from 'better-auth/node';
 import { auth } from './lib/auth.js';
 import userRouter from './routers/users.router.js';
 import postRouter from './routers/posts.router.js';
+import repostRouter from './routers/reposts.router.ts';
 import followsRouter from './routers/follows.router.js';
 import feedRouter from './routers/feed.router.js';
 import likesRouter from './routers/likes.router.js';
@@ -38,6 +39,7 @@ app.use('/api/posts', postRouter);
 app.use('/api/follow', followsRouter);
 app.use('/api/likes', likesRouter);
 app.use('/api/feed', feedRouter);
+app.use('/api/repost', repostRouter);
 
 app.use(errorHandler);
 

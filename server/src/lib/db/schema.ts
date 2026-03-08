@@ -1,5 +1,6 @@
 import * as p from 'drizzle-orm/pg-core';
 import { user } from '../auth-schema.ts';
+import { relations } from 'drizzle-orm';
 
 export const post = p.pgTable('post', {
   id: p.serial('id').primaryKey(),
@@ -8,6 +9,7 @@ export const post = p.pgTable('post', {
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   parentPostId: p.integer('parent_post_id'),
+  quotedPostId: p.integer('qouted_post_id'),
   content: p.text('content').notNull(),
   visibility: p
     .text('visibility', { enum: ['public', 'followers'] })
@@ -18,6 +20,48 @@ export const post = p.pgTable('post', {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
+
+export const repost = p.pgTable(
+  'repost',
+  {
+    id: p.serial('id').primaryKey(),
+    createdAt: p.timestamp('created_at').defaultNow().notNull(),
+    updatedAt: p
+      .timestamp('updated_at')
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    userId: p
+      .text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    postId: p
+      .integer('post_id')
+      .notNull()
+      .references(() => post.id, { onDelete: 'cascade' }),
+  },
+  (t) => [p.unique().on(t.userId, t.postId)],
+);
+
+export const bookmark = p.pgTable(
+  'bookmark',
+  {
+    id: p.serial('id').primaryKey(),
+    createdAt: p.timestamp('created_at').defaultNow().notNull(),
+    updatedAt: p
+      .timestamp('updated_at')
+      .$onUpdate(() => new Date())
+      .notNull(),
+    userId: p
+      .text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    postId: p
+      .integer('post_id')
+      .notNull()
+      .references(() => post.id, { onDelete: 'cascade' }),
+  },
+  (t) => [p.unique().on(t.userId, t.postId)],
+);
 
 export const like = p.pgTable('like', {
   id: p.serial('id').notNull().primaryKey(),
@@ -70,25 +114,55 @@ export const follow = p.pgTable(
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },
-  (t) => [unique().on(t.followerId, t.followingId)],
+  (t) => [p.unique().on(t.followerId, t.followingId)],
 );
-
-import { relations, sql } from 'drizzle-orm';
-import { unique } from 'drizzle-orm/gel-core';
 
 // 1. Post Relations (Connects posts to media, likes, and itself for comments)
 export const postRelations = relations(post, ({ one, many }) => ({
   media: many(media),
   likes: many(like),
-  // Self-referencing relation for comments
+
   comments: many(post, { relationName: 'post_comments' }),
   parentPost: one(post, {
     fields: [post.parentPostId],
     references: [post.id],
     relationName: 'post_comments',
   }),
+
+  quotePosts: many(post, { relationName: 'post_quotes' }),
+  quotedPost: one(post, {
+    fields: [post.quotedPostId],
+    references: [post.id],
+    relationName: 'post_quotes',
+  }),
+
+  reposts: many(repost),
+  bookmarks: many(bookmark),
+
   author: one(user, {
     fields: [post.userId],
+    references: [user.id],
+  }),
+}));
+
+export const repostRelations = relations(repost, ({ one }) => ({
+  post: one(post, {
+    fields: [repost.postId],
+    references: [post.id],
+  }),
+  user: one(user, {
+    fields: [repost.userId],
+    references: [user.id],
+  }),
+}));
+
+export const bookmarkRelations = relations(bookmark, ({ one }) => ({
+  post: one(post, {
+    fields: [bookmark.postId],
+    references: [post.id],
+  }),
+  user: one(user, {
+    fields: [bookmark.userId],
     references: [user.id],
   }),
 }));

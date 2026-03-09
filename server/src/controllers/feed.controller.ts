@@ -1,9 +1,10 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
 import { db } from '../lib/db/client.ts';
-import { follow, post } from '../lib/db/schema.ts';
-import { desc, eq, inArray } from 'drizzle-orm';
+import { follow, post, repost } from '../lib/db/schema.ts';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
+import { toPostDto } from '../lib/postDto.ts';
 
 export async function getFollowingFeed(req: Request, res: Response) {
   try {
@@ -17,36 +18,92 @@ export async function getFollowingFeed(req: Request, res: Response) {
       .where(eq(follow.followerId, req.session.user.id));
 
     const fetchedPosts = await db.query.post.findMany({
-      where: inArray(post.userId, follows),
+      where: and(isNull(post.parentPostId), inArray(post.userId, follows)),
       with: {
+        author: true,
         likes: true,
         media: true,
-        comments: {
-          with: { media: true, likes: true },
-          orderBy: desc(post.updatedAt),
+        reposts: true,
+        quotePosts: true,
+        parentPost: { with: { author: true } },
+        quotedPost: {
+          with: {
+            author: true,
+            likes: true,
+            media: true,
+            comments: true,
+            reposts: true,
+            quotePosts: true,
+          },
         },
-        author: true,
+        comments: {
+          with: {
+            media: true,
+            likes: true,
+            author: true,
+            parentPost: { with: { author: true } },
+          },
+        },
       },
-      orderBy: desc(post.updatedAt),
+      orderBy: desc(post.createdAt),
     });
 
     const resultPosts = fetchedPosts.map((post) => ({
-      ...post,
-      likeCount: post.likes.length,
-      comments: post.comments.map((comment) => ({
-        ...comment,
-        likeCount: comment.likes.length,
-      })),
+      itemType: 'post' as const,
+      createdAt: post.createdAt,
+      post: toPostDto(post),
     }));
+
+    const reposts = await db.query.repost.findMany({
+      where: inArray(repost.userId, follows),
+      orderBy: desc(repost.createdAt),
+      with: {
+        user: true,
+        post: {
+          with: {
+            author: true,
+            likes: true,
+            media: true,
+            reposts: true,
+            quotePosts: true,
+            parentPost: { with: { author: true } },
+            quotedPost: {
+              with: {
+                author: true,
+                likes: true,
+                media: true,
+                comments: true,
+                reposts: true,
+                quotePosts: true,
+              },
+            },
+            comments: {
+              with: {
+                media: true,
+                likes: true,
+                author: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const resultReposts = reposts.map((repost) => ({
+      itemType: 'repost' as const,
+      createdAt: repost.createdAt,
+      repostedBy: repost.user,
+      originalPost: toPostDto(repost.post),
+    }));
+
+    const result = [...resultPosts, ...resultReposts].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
 
     return res
       .status(200)
       .json(
-        new APIResponse(
-          'Following feed fetched successfully',
-          200,
-          resultPosts,
-        ),
+        new APIResponse('Following feed fetched successfully', 200, result),
       );
   } catch (error) {
     console.error('getFollowingFeed :: ', error);
@@ -57,11 +114,24 @@ export async function getFollowingFeed(req: Request, res: Response) {
 export async function getSimpleForYouFeed(req: Request, res: Response) {
   try {
     const fetchedPosts = await db.query.post.findMany({
+      where: isNull(post.parentPostId),
       with: {
         author: true,
         likes: true,
         media: true,
+        reposts: true,
+        quotePosts: true,
         parentPost: { with: { author: true } },
+        quotedPost: {
+          with: {
+            author: true,
+            likes: true,
+            media: true,
+            comments: true,
+            reposts: true,
+            quotePosts: true,
+          },
+        },
         comments: {
           with: {
             media: true,
@@ -69,21 +139,61 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
             author: true,
             parentPost: { with: { author: true } },
           },
-          orderBy: desc(post.updatedAt),
         },
       },
-      orderBy: desc(post.updatedAt),
+      orderBy: desc(post.createdAt),
     });
 
     const resultPosts = fetchedPosts.map((post) => ({
-      ...post,
-      likeCount: post.likes.length,
-      commentCount: post.comments.length,
-      comments: post.comments.map((comment) => ({
-        ...comment,
-        likeCount: comment.likes.length,
-      })),
+      itemType: 'post' as const,
+      createdAt: post.createdAt,
+      post: toPostDto(post),
     }));
+
+    const reposts = await db.query.repost.findMany({
+      orderBy: desc(repost.createdAt),
+      with: {
+        user: true,
+        post: {
+          with: {
+            author: true,
+            likes: true,
+            media: true,
+            reposts: true,
+            quotePosts: true,
+            parentPost: { with: { author: true } },
+            quotedPost: {
+              with: {
+                author: true,
+                likes: true,
+                media: true,
+                comments: true,
+                reposts: true,
+                quotePosts: true,
+              },
+            },
+            comments: {
+              with: {
+                media: true,
+                likes: true,
+                author: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const resultReposts = reposts.map((repost) => ({
+      itemType: 'repost' as const,
+      createdAt: repost.createdAt,
+      repostedBy: repost.user,
+      originalPost: toPostDto(repost.post),
+    }));
+
+    const result = [...resultPosts, ...resultReposts].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
 
     return res
       .status(200)
@@ -91,7 +201,7 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
         new APIResponse(
           'Simple For You feed fetched successfully',
           200,
-          resultPosts,
+          result,
         ),
       );
   } catch (error) {

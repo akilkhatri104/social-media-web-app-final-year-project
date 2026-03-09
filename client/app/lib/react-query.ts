@@ -22,4 +22,11 @@ export const queryKeys = {
         following: (userId: string) => ["following", userId] as const,
         status: (userId: string) => ["follow", "status", userId],
     },
+    repost: {
+        status: (id?: string | number) => ["repost", "status", id] as const,
+    },
+    bookmarks: {
+        all: ["bookmarks"] as const,
+        status: (id?: string | number) => ["bookmarks", "status", id] as const,
+    },
 };

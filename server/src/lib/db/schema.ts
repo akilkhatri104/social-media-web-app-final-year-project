@@ -9,7 +9,7 @@ export const post = p.pgTable('post', {
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   parentPostId: p.integer('parent_post_id'),
-  quotedPostId: p.integer('qouted_post_id'),
+  quotedPostId: p.integer('quoted_post_id'),
   content: p.text('content').notNull(),
   visibility: p
     .text('visibility', { enum: ['public', 'followers'] })

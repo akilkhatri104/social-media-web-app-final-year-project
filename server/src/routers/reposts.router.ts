@@ -7,7 +7,7 @@ import {
 
 const router = Router();
 
-router.get('/status/:postId ', verifyAuth, getRepostStatus);
+router.get('/status/:postId', verifyAuth, getRepostStatus);
 router.post('/:postId', verifyAuth, toggleRepost);
 
 export default router;

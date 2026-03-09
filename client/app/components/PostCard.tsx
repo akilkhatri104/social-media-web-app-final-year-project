@@ -42,13 +42,14 @@ import { Button } from "~/components/ui/button";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import { queryClient, queryKeys } from "~/lib/react-query";
-import type { APIResponse } from "~/lib/types";
+import type { APIResponse, FeedItem } from "~/lib/types";
 import { toast } from "sonner";
 import axios from "axios";
 import { useState } from "react";
 import { useMe } from "~/hooks/useMe";
 import PostComposer from "./PostComposer";
 import FollowButton from "./FollowButton";
+import { cn } from "~/lib/utils";
 
 type Props = {
     post: any;
@@ -108,6 +109,37 @@ const PostCard = ({ post }: Props) => {
             toast.dismiss("like-loading")
         }
     })
+
+    const repostMutation = useMutation({
+        mutationFn: async () => {
+            if (repostStatus) {
+                toast.loading("Unreposting post...", { id: "repost-loading" })
+            } else {
+                toast.loading("Reposting post...", { id: "repost-loading" })
+            }
+            const response = await api.post<APIResponse>(`/api/repost/${post.id}`)
+
+            return response.data
+        },
+        onError: (err) => {
+            toast.error(axios.isAxiosError(err) ? err?.response?.data.message : "An unknown error")
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.posts.all })
+            queryClient.invalidateQueries({ queryKey: queryKeys.repost.status(post.id) })
+            toast.success(data.message, {
+                action: {
+                    label: "Undo",
+                    onClick: () => repostMutation.mutate()
+                }
+            })
+
+        },
+        onSettled: () => {
+            toast.dismiss("repost-loading")
+        }
+    })
+
     const { data: likeStatus, isPending } = useQuery({
         queryFn: async () => {
             const response = await api.get<APIResponse>(`/api/likes/likeStatus/${post.id}`)
@@ -115,6 +147,15 @@ const PostCard = ({ post }: Props) => {
         },
         queryKey: queryKeys.posts.likeStatus(post.id),
     })
+
+    const { data: repostStatus, isPending: isRepostStatusPending } = useQuery({
+        queryFn: async () => {
+            const response = await api.get<APIResponse>(`/api/reposts/status/${post.id}`)
+            return !!response.data.data?.reposted
+        },
+        queryKey: queryKeys.repost.status(post.id),
+    })
+
     return (
         <Card className="border-0 rounded-none hover:bg-card/40 transition cursor-pointer">
             <CardContent className="flex gap-4 p-4">
@@ -219,11 +260,7 @@ const PostCard = ({ post }: Props) => {
                                         Are you absouloutly sure that you want to delete this post?
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
-                                {/* <AlertDialogContent>
-                                <form>
-                                    <input type="text" disabled value={`${import.meta.env.VITE_FRONTEND_URL}/post/${post.id}`} />
-                                </form>
-                            </AlertDialogContent> */}
+
                                 <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction onClick={deleteAction} asChild>
@@ -241,7 +278,6 @@ const PostCard = ({ post }: Props) => {
                         </p>
                     </Link>
 
-                    {/* Media */}
                     {/* Media */}
                     {post.media && Array.isArray(post.media) && post.media.length > 0 && (
                         <div className="relative w-full mt-2">
@@ -274,45 +310,9 @@ const PostCard = ({ post }: Props) => {
                             </Carousel>
                         </div>
                     )}
-                    {/* {post.media && Array.isArray(post.media) && post.media?.length > 0 && (
-                        <div
-                            className={`grid gap-2 rounded-2xl overflow-hidden ${post.media.length === 1 ? "grid-cols-1" : "grid-cols-2"
-                                }`}
-                        >
-                            {post.media.map((media: any) => (
-                                <div key={media.id} className="rounded-xl overflow-hidden">
-                                    {media.type === "image" ? (
-                                        <img
-                                            src={media.url}
-                                            alt="post media"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <video
-                                            controls
-                                            className="w-full rounded-xl"
-                                            src={media.url}
-                                        />
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )} */}
-
 
                     {/* Actions */}
                     <div className="flex justify-between p-2">
-                        {/* <Button
-                            variant="ghost"
-                            size="sm"
-                            className="flex items-center gap-2 text-muted-foreground"
-                            asChild
-                        >
-                            <NavLink to={`/post/${post.id}#reply`}>
-                                <MessageCircle size={18} />
-                                {post.commentCount}
-                            </NavLink>
-                        </Button> */}
                         <Dialog>
                             <DialogTrigger asChild >
                                 <Button
@@ -328,17 +328,24 @@ const PostCard = ({ post }: Props) => {
                                 <DialogHeader>
                                     <DialogTitle>Post a reply</DialogTitle>
                                 </DialogHeader>
-                                <PostComposer parentPostId={post.parentPostId} />
+                                <PostComposer parentPostId={post.id} />
                             </DialogContent>
                         </Dialog>
 
-                        {/* <Button
+                        <Button
                             variant="ghost"
                             size="sm"
-                            className="flex items-center gap-2 text-muted-foreground"
+                            className={cn('flex items-center text-muted-foreground gap-2', {
+                                "text-primary": !!repostStatus
+                            }
+                            )}
+                            onClick={() => {
+                                repostMutation.mutate()
+                            }}
                         >
                             <Repeat2 size={18} />
-                        </Button> */}
+                            {post.repostCount}
+                        </Button>
 
                         <Button
                             variant="ghost"

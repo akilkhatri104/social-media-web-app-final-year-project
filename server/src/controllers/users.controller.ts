@@ -395,3 +395,49 @@ export async function verifyForgetPasswordOTP(req: Request, res: Response) {
       : new AppError();
   }
 }
+
+export async function getUserByUsername(req: Request, res: Response) {
+  try {
+    const { username } = req.params;
+
+    if (!username) {
+      throw new AppError('Username is required', 400);
+    }
+
+    const result = await db
+      .select()
+      .from(user)
+      .where(eq(user.displayUsername, username))
+      .limit(1);
+
+    console.log("RESULT:", result);
+    console.log("ALL USERS:");
+    const all = await db.select({ 
+      username: user.username, 
+      displayUsername: user.displayUsername,
+      name: user.name 
+    }).from(user).limit(5);
+    console.log(all);
+
+    if (!result[0]) {
+      throw new AppError('User not found', 404);
+    }
+
+    const foundUser = result[0];
+
+    return res.status(200).json(
+      new APIResponse('User fetched successfully', 200, {
+        user: {
+          id: foundUser.id,
+          name: foundUser.name,
+          displayUsername: foundUser.displayUsername,
+          image: foundUser.image,
+          email: foundUser.email,
+        }
+      })
+    );
+  } catch (error) {
+    console.error('getUserByUsername :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}

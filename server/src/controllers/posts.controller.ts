@@ -19,7 +19,7 @@ export async function createPost(req: Request, res: Response) {
     if (!req.session.user.emailVerified) {
       throw new AppError(
         'User needs to verify their email to create a post',
-        401,
+        402,
       );
     }
 

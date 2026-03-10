@@ -15,7 +15,6 @@ import Header from "./components/Header";
 import { Toaster } from "./components/ui/sonner";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/react-query";
-import VerifyEmailDialog from "./components/VerifyEmailDialog";
 import { SidebarProvider, SidebarTrigger } from "./components/ui/sidebar";
 import { AppSidebar } from "./components/AppSidebar";
 import { useMe } from "./hooks/useMe";

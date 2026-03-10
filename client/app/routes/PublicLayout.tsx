@@ -1,5 +1,4 @@
 import { Outlet } from "react-router"
-import VerifyEmailDialog from "~/components/VerifyEmailDialog"
 
 export default function PublicLayout() {
     return (

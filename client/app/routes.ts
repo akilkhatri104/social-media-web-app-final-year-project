@@ -10,11 +10,11 @@ export default [
     layout("./routes/PublicLayout.tsx", [
         route("/signin", "./routes/signin.tsx"),
         route("/signup", "./routes/signup.tsx"),
-        route("/verify-email", "./routes/verify-email.tsx"),
     ]),
 
     layout("./routes/AppLayout.tsx", [
         route("/home", "./routes/home.tsx"),
+        route("/verify-email", "./routes/verify-email.tsx"),
         route("/post/:id", "./routes/post.$id.tsx"),
         route("/bookmarks", "./routes/bookmarks.tsx"),
     ]),

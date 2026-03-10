@@ -3,11 +3,10 @@ import { AppSidebar } from "~/components/AppSidebar"
 import { ExploreSidebar } from "~/components/ExploreSidebar"
 import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar"
 import { useMe } from "~/hooks/useMe"
-import VerifyEmailDialog from "../components/VerifyEmailDialog"
+import VerifyEmailPrompt from "~/components/VerifyEmailPrompt"
 
 export default function AppLayout() {
-    const { isAuth, isInitialLoading } = useMe()
-    const location = useLocation()
+    const { isAuth, isInitialLoading, data: user } = useMe()
 
     if (isInitialLoading) return null
 
@@ -25,6 +24,7 @@ export default function AppLayout() {
                     </div>
                     <div className="flex min-w-0 flex-1">
                         <div className="min-w-0 flex-1">
+                            <VerifyEmailPrompt />
                             <Outlet />
                         </div>
                         <ExploreSidebar />

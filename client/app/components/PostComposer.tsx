@@ -52,7 +52,20 @@ export default function PostComposer({
             });
         },
         onError: (err) => {
-            toast.error(axios.isAxiosError(err) ? err.response?.data.message : "Unknown error")
+            if (axios.isAxiosError(err)) {
+                if (err.response?.status == 402) {
+                    toast.error(err.response.data.message, {
+                        action: {
+                            label: "Verify Email",
+                            onClick: () => {
+                                navigate('/verify-email')
+                            }
+                        }
+                    })
+                }
+            } else {
+                toast.error("Unknown Error")
+            }
         },
         onSuccess: () => {
             setContent("");

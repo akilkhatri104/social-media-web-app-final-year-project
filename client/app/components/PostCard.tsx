@@ -37,7 +37,7 @@ import {
     CarouselPrevious,
 } from "~/components/ui/carousel"
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
-import { Bookmark, EllipsisVerticalIcon, Heart, MessageCircle, Repeat2, Share2Icon, Trash2Icon } from "lucide-react";
+import { Pencil, Bookmark, EllipsisVerticalIcon, Heart, MessageCircle, Repeat2, Share2Icon, Trash2Icon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
@@ -234,10 +234,10 @@ const PostCard = ({ post }: Props) => {
                             >
                                 {post.author.name}
                             </Link>
-                            <span className="text-muted-foreground">
+                            <span className="ml-2 text-muted-foreground">
                                 @{post.author.displayUsername}
                             </span>
-                            <span className="text-muted-foreground">·</span>
+                            <span className="mx-3 text-muted-foreground">·</span>
                             <span className="text-muted-foreground">
                                 {new Date(post.createdAt).toLocaleDateString()}
                             </span>
@@ -382,6 +382,7 @@ const PostCard = ({ post }: Props) => {
                                 <Button
                                     variant="ghost"
                                     size="sm"
+                                    disabled={repostMutation.isPending}
                                     className={cn('flex items-center text-muted-foreground gap-2', {
                                         "text-primary": !!repostStatus
                                     }

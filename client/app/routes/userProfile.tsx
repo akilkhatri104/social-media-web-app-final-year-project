@@ -1,10 +1,9 @@
 import { useParams, Link } from "react-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import { useState } from "react";
 import PostCard from "~/components/PostCard";
 import { Separator } from "~/components/ui/separator";
-import { queryClient } from "~/lib/react-query";
 import { useMe } from "~/hooks/useMe";
 import {
   Dialog,
@@ -13,8 +12,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import { toast } from "sonner";
-import axios from "axios";
+import FollowButton from "~/components/FollowButton";
 
 export default function UserProfile() {
   const { username } = useParams();
@@ -23,72 +21,56 @@ export default function UserProfile() {
   const cleanUsername = username?.replace("@", "");
   const { data: session } = useMe();
 
-  // Fetch user info
   const { data: userData, isLoading: userLoading } = useQuery({
     queryKey: ["userProfile", cleanUsername],
     queryFn: async () => {
       const res = await api.get(`/api/users/${cleanUsername}`);
+      console.log("USER DATA:", res.data);
       return res.data.data?.user;
     },
     enabled: !!cleanUsername
   });
 
-  // Fetch follower count
   const { data: followerCount } = useQuery({
     queryKey: ["followerCount", userData?.id],
     queryFn: async () => {
       const res = await api.get(`/api/follows/followers/count/${userData?.id}`);
+      console.log("FOLLOWER COUNT:", res.data);
       return res.data.data?.count ?? 0;
     },
     enabled: !!userData?.id
   });
 
-  // Fetch following count
   const { data: followingCount } = useQuery({
     queryKey: ["followingCount", userData?.id],
     queryFn: async () => {
       const res = await api.get(`/api/follows/following/count/${userData?.id}`);
+      console.log("FOLLOWING COUNT:", res.data);
       return res.data.data?.count ?? 0;
     },
     enabled: !!userData?.id
   });
 
-  // Fetch followers list (only when dialog opens)
   const { data: followersList, isLoading: followersLoading } = useQuery({
     queryKey: ["followersList", userData?.id],
     queryFn: async () => {
       const res = await api.get(`/api/follows/followers/${userData?.id}`);
-      return res.data.data?.followers; // ✅ correct field name
+      console.log("FOLLOWERS LIST:", res.data);
+      return res.data.data?.followers;
     },
     enabled: !!userData?.id && followDialog === "followers"
   });
 
-  // Fetch following list (only when dialog opens)
   const { data: followingList, isLoading: followingLoading } = useQuery({
     queryKey: ["followingList", userData?.id],
     queryFn: async () => {
       const res = await api.get(`/api/follows/following/${userData?.id}`);
-      return res.data.data?.following; // ✅ correct field name
+      console.log("FOLLOWING LIST:", res.data);
+      return res.data.data?.following;
     },
     enabled: !!userData?.id && followDialog === "following"
   });
 
-  // Follow / Unfollow
-  const followMutation = useMutation({
-    mutationFn: async () => {
-      await api.post(`/api/follows/${userData?.id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["followerCount", userData?.id] });
-      queryClient.invalidateQueries({ queryKey: ["followersList", userData?.id] });
-      toast.success("Done!");
-    },
-    onError: (err) => {
-      toast.error(axios.isAxiosError(err) ? err.response?.data.message : "Error");
-    }
-  });
-
-  // Fetch user posts
   const { data: postsData, isLoading: postsLoading } = useQuery({
     queryKey: ["userPosts", userData?.id],
     queryFn: async () => {
@@ -101,13 +83,10 @@ export default function UserProfile() {
   if (userLoading) return <p className="p-10 text-white">Loading...</p>;
   if (!userData) return <p className="p-10 text-white">User not found</p>;
 
-  // ✅ correct session structure check
-  const isOwnProfile = session?.user?.id === userData?.id;
+  const isOwnProfile = session?.id === userData?.id;
 
   return (
     <div className="text-white">
-
-      {/* Profile Header */}
       <div className="flex items-center gap-10 p-10">
         <img
           src={userData.image || `https://ui-avatars.com/api/?name=${userData.displayUsername}`}
@@ -119,7 +98,6 @@ export default function UserProfile() {
             <span className="text-gray-400 ml-2">@{userData.displayUsername}</span>
           </h2>
 
-          {/* ✅ Edit Profile for own profile, Follow for others */}
           {isOwnProfile ? (
             <Link to="/settings/profile">
               <button className="border px-4 py-1 mt-2 hover:bg-white hover:text-black">
@@ -127,16 +105,9 @@ export default function UserProfile() {
               </button>
             </Link>
           ) : (
-            <button
-              onClick={() => followMutation.mutate()}
-              disabled={followMutation.isPending}
-              className="border px-4 py-1 mt-2 hover:bg-white hover:text-black disabled:opacity-50"
-            >
-              {followMutation.isPending ? "..." : "Follow"}
-            </button>
+            <FollowButton userId={userData?.id} />
           )}
 
-          {/* Clickable follower/following counts */}
           <div className="flex gap-8 mt-3">
             <button onClick={() => setFollowDialog("followers")} className="hover:underline">
               <span className="font-bold">{followerCount ?? 0}</span> followers
@@ -148,7 +119,6 @@ export default function UserProfile() {
         </div>
       </div>
 
-      {/* Followers Dialog */}
       <Dialog open={followDialog === "followers"} onOpenChange={(o) => !o && setFollowDialog(null)}>
         <DialogContent>
           <DialogHeader>
@@ -178,7 +148,6 @@ export default function UserProfile() {
         </DialogContent>
       </Dialog>
 
-      {/* Following Dialog */}
       <Dialog open={followDialog === "following"} onOpenChange={(o) => !o && setFollowDialog(null)}>
         <DialogContent>
           <DialogHeader>
@@ -208,7 +177,6 @@ export default function UserProfile() {
         </DialogContent>
       </Dialog>
 
-      {/* Tabs */}
       <div className="flex gap-10 px-10 border-b pb-2">
         {["posts", "comments", "likes"].map((tab) => (
           <button
@@ -223,7 +191,6 @@ export default function UserProfile() {
         ))}
       </div>
 
-      {/* Posts Tab */}
       {activeTab === "posts" && (
         <div className="flex flex-col">
           {postsLoading && <p className="p-10">Loading posts...</p>}
@@ -239,13 +206,8 @@ export default function UserProfile() {
         </div>
       )}
 
-      {activeTab === "comments" && (
-        <p className="p-10 text-gray-400">Comments coming soon</p>
-      )}
-      {activeTab === "likes" && (
-        <p className="p-10 text-gray-400">Likes coming soon</p>
-      )}
-
+      {activeTab === "comments" && <p className="p-10 text-gray-400">Comments coming soon</p>}
+      {activeTab === "likes" && <p className="p-10 text-gray-400">Likes coming soon</p>}
     </div>
   );
 }

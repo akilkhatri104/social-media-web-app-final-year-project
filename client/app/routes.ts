@@ -19,6 +19,7 @@ export default [
         route("/post/:id", "./routes/post.$id.tsx"),
         route("/bookmarks", "./routes/bookmarks.tsx"),
         route("/profile", "./routes/profile.tsx"),
+        route("/settings/profile", "./routes/editProfile.tsx"),
         route("/:username", "./routes/userProfile.tsx"),
     ]),
 ] satisfies RouteConfig;

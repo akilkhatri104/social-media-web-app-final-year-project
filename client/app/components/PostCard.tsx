@@ -37,7 +37,7 @@ import {
     CarouselPrevious,
 } from "~/components/ui/carousel"
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
-import { EllipsisVerticalIcon, Heart, MessageCircle, Pencil, Repeat2, Share2Icon, Trash2Icon } from "lucide-react";
+import { Bookmark, EllipsisVerticalIcon, Heart, MessageCircle, Repeat2, Share2Icon, Trash2Icon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
@@ -77,6 +77,7 @@ const PostCard = ({ post }: Props) => {
             const res = await api.delete<APIResponse>(`/api/posts/${post.id}`)
             toast.success(res.data.message)
             queryClient.invalidateQueries({ queryKey: queryKeys.posts.all })
+            queryClient.invalidateQueries({ queryKey: queryKeys.bookmarks.all })
         } catch (error) {
             toast.error(axios.isAxiosError(error) ? error.response?.data.message : "Unknown error while deleting the post")
         } finally {
@@ -147,6 +148,7 @@ const PostCard = ({ post }: Props) => {
             return !!response.data.data?.likeStatus
         },
         queryKey: queryKeys.posts.likeStatus(post.id),
+        enabled: !isInitialLoading && isAuth,
     })
 
     const { data: repostStatus, isPending: isRepostStatusPending } = useQuery({
@@ -155,6 +157,42 @@ const PostCard = ({ post }: Props) => {
             return !!response.data.data?.reposted
         },
         queryKey: queryKeys.repost.status(post.id),
+        enabled: !isInitialLoading && isAuth,
+    })
+
+    const { data: bookmarkStatus } = useQuery({
+        queryFn: async () => {
+            const response = await api.get<APIResponse>(`/api/bookmarks/status/${post.id}`)
+            return !!response.data.data?.bookmarked
+        },
+        queryKey: queryKeys.bookmarks.status(post.id),
+        enabled: !isInitialLoading && isAuth,
+    })
+
+    const bookmarkMutation = useMutation({
+        mutationFn: async () => {
+            const response = await api.post<APIResponse>(`/api/bookmarks/${post.id}`)
+            return response.data
+        },
+        onMutate: async () => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.bookmarks.status(post.id) })
+            const previousStatus = queryClient.getQueryData<boolean>(queryKeys.bookmarks.status(post.id))
+            queryClient.setQueryData(queryKeys.bookmarks.status(post.id), !previousStatus)
+            toast.loading(previousStatus ? "Removing bookmark..." : "Bookmarking post...", { id: "bookmark-loading" })
+            return { previousStatus }
+        },
+        onError: (err, _, context) => {
+            queryClient.setQueryData(queryKeys.bookmarks.status(post.id), context?.previousStatus)
+            toast.error(axios.isAxiosError(err) ? err?.response?.data.message : "An unknown error")
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.bookmarks.status(post.id) })
+            queryClient.invalidateQueries({ queryKey: queryKeys.bookmarks.all })
+            toast.success(data.message)
+        },
+        onSettled: () => {
+            toast.dismiss("bookmark-loading")
+        }
     })
 
     return (
@@ -258,7 +296,7 @@ const PostCard = ({ post }: Props) => {
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Delete this post?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Are you absouloutly sure that you want to delete this post?
+                                        Are you absolutely sure that you want to delete this post?
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
 
@@ -378,15 +416,32 @@ const PostCard = ({ post }: Props) => {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className={cn("flex items-center gap-2 text-muted-foreground", {
-                                "text-red-500": !!likeStatus,
-                            })}
+                            disabled={likeMutation.isPending}
+                            className="flex items-center gap-2 text-muted-foreground"
                             onClick={() => {
                                 likeMutation.mutate()
                             }}
                         >
                             <Heart size={18} fill={!!likeStatus ? "red" : undefined} />
                             {post.likeCount}
+                        </Button>
+
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={bookmarkMutation.isPending}
+                            className={cn('flex items-center text-muted-foreground gap-2', {
+                                "text-primary": !!bookmarkStatus
+                            })}
+                            onClick={() => {
+                                if (!isAuth) {
+                                    toast.error("Please sign in to bookmark posts")
+                                    return
+                                }
+                                bookmarkMutation.mutate()
+                            }}
+                        >
+                            <Bookmark size={18} fill={bookmarkStatus ? "currentColor" : "none"} />
                         </Button>
                     </div>
                 </div>

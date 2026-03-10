@@ -14,13 +14,15 @@ import axios from "axios";
 type Props = {
     parentPostId?: number;
     placeholder?: string;
-    id?: string
+    id?: string,
+    quotedPostId?: number
 };
 
 export default function PostComposer({
     parentPostId,
     placeholder = "What's happening?",
-    id = 'post'
+    id = 'post',
+    quotedPostId
 }: Props) {
     const queryClient = useQueryClient();
     const [content, setContent] = useState("");
@@ -35,6 +37,10 @@ export default function PostComposer({
             formData.append("content", content);
             if (parentPostId) {
                 formData.append("parentPostId", String(parentPostId));
+            }
+
+            if (quotedPostId) {
+                formData.append("quotedPostId", String(quotedPostId))
             }
 
             files.forEach((file) => {

@@ -13,7 +13,7 @@ function RepostFeedCard({ repost }: Props) {
         return null
     return (
         <div>
-            <div className='flex items-center mx-2 text-muted-foreground'>
+            <div className='flex items-center mx-2 p-2 bg-card/20 text-muted-foreground'>
                 <Repeat size={18} className='mr-2' /> <Link to={`/@${repost.repostedBy?.displayUsername}`} className='hover:underline'>@{repost.repostedBy?.displayUsername} reposted</Link>
             </div>
             <PostCard post={repost.originalPost} />

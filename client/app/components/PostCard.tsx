@@ -37,7 +37,7 @@ import {
     CarouselPrevious,
 } from "~/components/ui/carousel"
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
-import { EllipsisVerticalIcon, Heart, MessageCircle, Repeat2, Share2Icon, Trash2Icon } from "lucide-react";
+import { EllipsisVerticalIcon, Heart, MessageCircle, Pencil, Repeat2, Share2Icon, Trash2Icon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
@@ -50,6 +50,7 @@ import { useMe } from "~/hooks/useMe";
 import PostComposer from "./PostComposer";
 import FollowButton from "./FollowButton";
 import { cn } from "~/lib/utils";
+import { QuotedPostEmbed } from "./QuotedPostEmbed";
 
 type Props = {
     post: any;
@@ -59,6 +60,7 @@ const PostCard = ({ post }: Props) => {
     const [shareDialogOpen, setShareDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeletedDialogOpen] = useState(false)
     const { isInitialLoading, data: session, isAuth } = useMe()
+    const [repostDialogOpen, setRepostDialogOpen] = useState(false)
     const shareAction = () => {
         navigator.clipboard.writeText(`${import.meta.env.VITE_FRONTEND_URL}/post/${post.id}`)
         setShareDialogOpen(false)
@@ -142,7 +144,7 @@ const PostCard = ({ post }: Props) => {
 
     const { data: likeStatus, isPending } = useQuery({
         queryFn: async () => {
-            const response = await api.get<APIResponse>(`/api/likes/likeStatus/${post.id}`)
+            const response = await api.get<APIResponse>(`/api/likes/status/${post.id}`)
             return !!response.data.data?.likeStatus
         },
         queryKey: queryKeys.posts.likeStatus(post.id),
@@ -150,7 +152,7 @@ const PostCard = ({ post }: Props) => {
 
     const { data: repostStatus, isPending: isRepostStatusPending } = useQuery({
         queryFn: async () => {
-            const response = await api.get<APIResponse>(`/api/reposts/status/${post.id}`)
+            const response = await api.get<APIResponse>(`/api/repost/status/${post.id}`)
             return !!response.data.data?.reposted
         },
         queryKey: queryKeys.repost.status(post.id),
@@ -311,6 +313,11 @@ const PostCard = ({ post }: Props) => {
                         </div>
                     )}
 
+                    {(post.quotedPost || post.quotedPostId) && (
+                        <QuotedPostEmbed post={post.quotedPost} />
+                    )}
+
+
                     {/* Actions */}
                     <div className="flex justify-between p-2">
                         <Dialog>
@@ -332,30 +339,54 @@ const PostCard = ({ post }: Props) => {
                             </DialogContent>
                         </Dialog>
 
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className={cn('flex items-center text-muted-foreground gap-2', {
-                                "text-primary": !!repostStatus
-                            }
-                            )}
-                            onClick={() => {
-                                repostMutation.mutate()
-                            }}
-                        >
-                            <Repeat2 size={18} />
-                            {post.repostCount}
-                        </Button>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={cn('flex items-center text-muted-foreground gap-2', {
+                                        "text-primary": !!repostStatus
+                                    }
+                                    )}
+                                >
+                                    <Repeat2 size={18} />
+                                    {post.repostCount}
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onClick={() => {
+                                    repostMutation.mutate()
+                                }}>
+                                    <Repeat2 /> {!!repostStatus ? "Unrepost" : "Repost"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setRepostDialogOpen(true)}>
+                                    <Pencil /> Quote Repost
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <Dialog open={repostDialogOpen} onOpenChange={setRepostDialogOpen}>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Post a quote repost</DialogTitle>
+                                </DialogHeader>
+                                <PostComposer quotedPostId={post.id} />
+                            </DialogContent>
+                        </Dialog>
+
 
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="flex items-center gap-2 text-muted-foreground"
+                            className={cn("flex items-center gap-2 text-muted-foreground", {
+                                "text-red-500": !!likeStatus,
+                            })}
                             onClick={() => {
                                 likeMutation.mutate()
                             }}
                         >
-                            <Heart size={18} fill={!isPending && likeStatus ? "red" : undefined} />
+                            <Heart size={18} fill={!!likeStatus ? "red" : undefined} />
                             {post.likeCount}
                         </Button>
                     </div>

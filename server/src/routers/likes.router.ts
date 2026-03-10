@@ -3,7 +3,7 @@ import {
   getLikesCountByPostId,
   getLikeStatusByPostId,
   toggleLike,
-} from '../controllers/likes.constoller.ts';
+} from '../controllers/likes.controller.ts';
 import { verifyAuth } from '../middlewares/verifyAuth.ts';
 
 const router = Router();

@@ -85,11 +85,10 @@ const PostCard = ({ post }: Props) => {
     }
     const likeMutation = useMutation({
         mutationFn: async () => {
-            if (likeStatus) {
-                toast.loading("Unliking post...", { id: "ilke-loading" })
-            } else {
-                toast.loading("Liking post...", { id: "like-loading" })
-            }
+            toast.loading(
+                !!likeStatus ? "Unliking post..." : "Liking Post",
+                { id: "like-loading" }
+            )
             const response = await api.post<APIResponse>(`/api/likes/${post.id}`)
 
             return response.data

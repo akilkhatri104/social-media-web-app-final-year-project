@@ -82,7 +82,7 @@ export async function createPost(req: Request, res: Response) {
       const insertResults = await Promise.all(queries);
     }
     return res
-      .status(200)
+      .status(201)
       .json(new APIResponse('Post created successfully!', 201, createdPost));
   } catch (error) {
     console.error('createPost :: ', error);

@@ -30,18 +30,6 @@ export async function signin(req: Request, res: Response) {
       throw new AppError('Password is required', 400);
     }
 
-    if (
-      !password.match(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/gm)
-    ) {
-      throw new AppError(
-        `Password must contain: 
-        - at least 8 characters
-- must contain at least 1 uppercase letter, 1 lowercase letter, and 1 number
-- Can contain special characters`,
-        400,
-      );
-    }
-
     let response = null;
     // Is not an email, hence user is signing in through username
     if (

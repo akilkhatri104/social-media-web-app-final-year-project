@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react"
-import { useEffect, useState, type FormEvent } from "react"
+import { useState } from "react"
+import { useFormStatus } from "react-dom"
 import { useNavigate } from "react-router"
 import { toast } from "sonner"
 import { useMe } from "~/hooks/useMe"
@@ -10,24 +11,31 @@ import { api } from "~/lib/axios"
 import type { APIResponse } from "~/lib/types"
 import axios from "axios"
 
+type SubmitButtonProps = {
+    idleLabel: string
+    pendingLabel: string
+}
+
+function SubmitButton({ idleLabel, pendingLabel }: SubmitButtonProps) {
+    const { pending } = useFormStatus()
+
+    return (
+        <Button type="submit" disabled={pending}>
+            {pending ? pendingLabel : idleLabel}
+        </Button>
+    )
+}
+
 export function VerifyEmailForm() {
     const { data, isInitialLoading } = useMe()
     const [emailSent, setEmailSent] = useState(false)
-    const [emailSendPending, setEmailSendPending] = useState(false)
-    const [emailOTPPending, setEmailOTPPending] = useState(false)
     const navigate = useNavigate()
 
 
-    async function handleSendEmail() {
+    async function handleSendEmail(_: FormData) {
         try {
             toast("Sending OTP...", { id: "email-loading" })
-            setEmailSendPending(true)
             const response = await api.get<APIResponse>('/api/users/verify-email')
-            if (response.status >= 400) {
-                toast.error("Error while sending email")
-                return
-            }
-
             toast.success(response.data.message)
             setEmailSent(true)
         } catch (error) {
@@ -37,14 +45,12 @@ export function VerifyEmailForm() {
             } else
                 toast.error("Unknown Error")
         } finally {
-            setEmailSendPending(false)
             toast.dismiss("email-loading")
         }
     }
 
     async function handleOTP(formData: FormData) {
         try {
-            setEmailOTPPending(true)
             toast("Verifying OTP...", { id: "otp-loading" })
             const otp = formData.get('otp')
             if (!otp || typeof otp !== 'string' || otp.length !== 6) {
@@ -52,11 +58,6 @@ export function VerifyEmailForm() {
                 return
             }
             const response = await api.post<APIResponse>('/api/users/verify-email', { otp })
-
-            if (response.status >= 400) {
-                toast.error("Error while sending email")
-                return
-            }
 
             toast.success(response.data.message)
             navigate('/')
@@ -67,7 +68,6 @@ export function VerifyEmailForm() {
             } else
                 toast.error("Unknown Error")
         } finally {
-            setEmailOTPPending(false)
             toast.dismiss("otp-loading")
         }
     }
@@ -84,7 +84,7 @@ export function VerifyEmailForm() {
                             We will send an OTP to your email address
                         </p>
                         <h1>{data?.user?.email}</h1>
-                        <Button type="submit" disabled={emailSendPending}>Send Email</Button>
+                        <SubmitButton idleLabel="Send Email" pendingLabel="Sending..." />
                     </form>
                 ) : (
                     <form action={handleOTP} className="flex flex-col gap-3">
@@ -93,8 +93,8 @@ export function VerifyEmailForm() {
                             We have sent the OTP (Check your SPAM folder if you can't find the email)
                         </p>
                         <Label htmlFor="otp">OTP</Label>
-                        <Input name="otp" maxLength={6} minLength={6} />
-                        <Button type="submit" disabled={emailOTPPending}>Verify OTP</Button>
+                        <Input id="otp" name="otp" maxLength={6} minLength={6} autoComplete="one-time-code" />
+                        <SubmitButton idleLabel="Verify OTP" pendingLabel="Verifying..." />
                     </form>
                 )
             )}

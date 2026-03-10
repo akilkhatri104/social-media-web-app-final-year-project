@@ -58,24 +58,52 @@ export const SignupForm = () => {
         resolver: zodResolver(formSchema),
     })
 
-    const image = form.watch('image')
+    const image = form.watch("image")
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (!image) {
+            setPreviewUrl(null)
+            return
+        }
+
+        const objectUrl = URL.createObjectURL(image)
+        setPreviewUrl(objectUrl)
+
+        return () => {
+            URL.revokeObjectURL(objectUrl)
+        }
+    }, [image])
 
     async function onSubmit(data: z.infer<typeof formSchema>) {
         try {
             setIsFormDisabled(true)
-            toast("Signing up...")
-            console.log(data)
-            const response = await api.post<APIResponse>('/api/users/signup', data)
-            console.log(response)
-            if (response.status >= 400 || !response.data.success) {
+            toast.loading("Signing up...", { id: "signup-loading" })
+
+            const formData = new FormData()
+            formData.append("name", data.name)
+            formData.append("username", data.username)
+            formData.append("email", data.email)
+            formData.append("password", data.password)
+
+            if (data.image) {
+                formData.append("image", data.image)
+            }
+            const response = await api.post<APIResponse>('/api/users/signup', formData, {
+                headers: {
+                    "Content-Type": "multipart/formdata"
+                }
+            })
+
+
+            if (!response.data.success) {
                 toast.error(response.data.message)
                 return
             }
 
-
             toast.success(response.data.message)
             queryClient.invalidateQueries({ queryKey: queryKeys.auth.me })
-            navigate('/')
+            navigate('/home')
         } catch (error) {
             console.error(error)
             if (axios.isAxiosError(error)) {
@@ -84,6 +112,7 @@ export const SignupForm = () => {
                 toast.error("Unknown error")
         } finally {
             setIsFormDisabled(false)
+            toast.dismiss("signup-loading")
         }
 
     }
@@ -202,7 +231,10 @@ export const SignupForm = () => {
                                 autoComplete="off"
                                 type='file'
                                 accept='image/*'
-                                onChange={e => form.setValue('image', e.target.files?.[0] ?? undefined)}
+                                onChange={e => {
+                                    const file = e.target.files?.[0]
+                                    onChange(file ?? undefined)
+                                }}
                             />
                             <FieldDescription>
                                 Upload your image (optional)
@@ -211,7 +243,14 @@ export const SignupForm = () => {
                         </Field>
                     )}
                 />
-                {image && <img src={URL.createObjectURL(image)} alt="Profile Picture" className='mt-2 h-32 w-32 object-cover rounded' />}
+                {previewUrl && (
+                    <img
+                        src={previewUrl}
+                        alt="Profile Picture"
+                        className="mt-2 h-32 w-32 object-cover rounded"
+                    />
+                )}
+
             </FieldSet>
 
             <Button disabled={isFormDisabled} className='mt-3' type='submit'>Signup</Button>

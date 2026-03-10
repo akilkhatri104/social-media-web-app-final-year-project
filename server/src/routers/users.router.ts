@@ -9,6 +9,7 @@ import {
   verifyEmailVerificationOTP,
   sendForgetPasswordOTP,
   verifyForgetPasswordOTP,
+  getUserByUsername,
 } from '../controllers/users.controller.js';
 import { verifyAuth } from '../middlewares/verifyAuth.ts';
 import { upload } from '../lib/multer.ts';
@@ -32,5 +33,6 @@ protectedRouter.post('/verify-email', verifyEmailVerificationOTP);
 
 router.use(publicRouter);
 router.use(protectedRouter);
+router.get('/:username', getUserByUsername);
 
 export default router;

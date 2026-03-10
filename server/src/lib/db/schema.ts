@@ -49,6 +49,7 @@ export const bookmark = p.pgTable(
     createdAt: p.timestamp('created_at').defaultNow().notNull(),
     updatedAt: p
       .timestamp('updated_at')
+      .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
     userId: p

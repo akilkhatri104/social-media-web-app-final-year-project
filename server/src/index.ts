@@ -6,6 +6,7 @@ import { auth } from './lib/auth.js';
 import userRouter from './routers/users.router.js';
 import postRouter from './routers/posts.router.js';
 import repostRouter from './routers/reposts.router.ts';
+import bookmarksRouter from './routers/bookmarks.router.ts';
 import followsRouter from './routers/follows.router.js';
 import feedRouter from './routers/feed.router.js';
 import likesRouter from './routers/likes.router.js';
@@ -40,6 +41,7 @@ app.use('/api/follow', followsRouter);
 app.use('/api/likes', likesRouter);
 app.use('/api/feed', feedRouter);
 app.use('/api/repost', repostRouter);
+app.use('/api/bookmarks', bookmarksRouter);
 
 app.use(errorHandler);
 

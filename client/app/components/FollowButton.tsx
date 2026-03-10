@@ -27,14 +27,16 @@ function FollowButton({ userId }: Props) {
         queryKey: queryKeys.follow.status(userId),
         enabled: isAuth && !!viewerId && viewerId !== userId,
         queryFn: async () => {
-            const res = await api.get<APIResponse>(`/api/follow/status/${userId}`)
+
+            const res = await api.get<APIResponse>(`/api/follows/status/${userId}`)
             return res.data.data?.isFollowing
         }
     })
 
     const { mutate: followMutation } = useMutation({
         mutationFn: async () => {
-            const res = await api.post<APIResponse>(`/api/follow/${userId}`)
+  
+            const res = await api.post<APIResponse>(`/api/follows/${userId}`)
             return res.data
         },
         onSuccess: (data) => {
@@ -62,6 +64,10 @@ function FollowButton({ userId }: Props) {
             toast.dismiss("follow-loading")
             setIsFollowButtonDisabled(false)
             queryClient.invalidateQueries({ queryKey: queryKeys.posts.feed("following") })
+            queryClient.invalidateQueries({ queryKey: ["followerCount"] })
+            queryClient.invalidateQueries({ queryKey: ["followingCount"] })
+            queryClient.invalidateQueries({ queryKey: ["followersList"] })
+            queryClient.invalidateQueries({ queryKey: ["followingList"] })
         }
     })
 
@@ -93,7 +99,11 @@ function FollowButton({ userId }: Props) {
 
     return (
         <>
-            <Button disabled={isFollowButtonDisabled} onClick={handleClick} variant={isFollowing ? "outline" : "default"}>
+            <Button
+                disabled={isFollowButtonDisabled}
+                onClick={handleClick}
+                variant={isFollowing ? "outline" : "default"}
+            >
                 {isFollowing ? "Following" : "Follow"}
             </Button>
 
@@ -105,7 +115,6 @@ function FollowButton({ userId }: Props) {
                             Create an account or sign in to follow this user.
                         </DialogDescription>
                     </DialogHeader>
-
                     <DialogFooter>
                         <Button asChild variant="outline">
                             <NavLink to="/signin">Signin</NavLink>

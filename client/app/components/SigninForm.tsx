@@ -22,6 +22,7 @@ import { queryClient, queryKeys } from '~/lib/react-query'
 import { useMe } from '~/hooks/useMe'
 import { useEffect, useState } from 'react'
 
+console.log("Backend URL:", import.meta.env.VITE_BACKEND_URL);
 
 const formSchema = z.object({
     username: z

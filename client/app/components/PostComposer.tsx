@@ -73,10 +73,12 @@ export default function PostComposer({
 
     return !isInitialLoading && !isAuth ? <div className="flex gap-4 p-4 border-b"><NavLink className='hover:underline text-accent-foreground' to='/signin'>Signin</NavLink>or<NavLink className='hover:underline text-accent-foreground' to='/signup'>Signup</NavLink> to make your post!</div> : (
         <div className="flex gap-4 p-4 border-b" id={id}>
-            <Avatar>
-                <AvatarImage src={data?.image} />
-                <AvatarFallback>{data?.displayUsername[0]}</AvatarFallback>
-            </Avatar>
+            <NavLink to={`/@${data?.displayUsername}`}>
+                <Avatar className="cursor-pointer">
+                    <AvatarImage src={data?.image} />
+                    <AvatarFallback>{data?.displayUsername?.[0]}</AvatarFallback>
+                </Avatar>
+            </NavLink>
 
             <div className="flex-1 space-y-3">
                 <Textarea

@@ -7,6 +7,7 @@ import {
 
 export default [
     index("./routes/index.tsx"),
+
     layout("./routes/PublicLayout.tsx", [
         route("/signin", "./routes/signin.tsx"),
         route("/signup", "./routes/signup.tsx"),
@@ -17,5 +18,7 @@ export default [
         route("/verify-email", "./routes/verify-email.tsx"),
         route("/post/:id", "./routes/post.$id.tsx"),
         route("/bookmarks", "./routes/bookmarks.tsx"),
+        route("/profile", "./routes/profile.tsx"),
+        route("/:username", "./routes/userProfile.tsx"),
     ]),
 ] satisfies RouteConfig;

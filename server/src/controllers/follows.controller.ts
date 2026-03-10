@@ -235,7 +235,7 @@ export async function getFollowStatusByUserId(req: Request, res: Response) {
     const userExists = await db.query.user.findFirst({
       where: eq(user.id, userId),
     });
-    if (!user) {
+    if (!userExists) {
       throw new AppError('User with give userId not found', 404);
     }
 

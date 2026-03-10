@@ -158,7 +158,7 @@ export async function signup(req: Request, res: Response) {
 export async function logout(req: Request, res: Response) {
   try {
     const response = await auth.api.signOut({
-      headers: req.header,
+      headers: req.headers,
       returnHeaders: true,
     });
     const setCookies = response.headers.getSetCookie();

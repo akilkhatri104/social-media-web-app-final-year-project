@@ -12,10 +12,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { NavLink } from "react-router"
 
 type Props = {
-    userId: string
+    userId: string,
+    className?: string
 }
 
-function FollowButton({ userId }: Props) {
+function FollowButton({ userId, className }: Props) {
     const { isInitialLoading, isAuth, data: user } = useMe()
     const viewerId = user?.id
     const isGuest = !isInitialLoading && !isAuth
@@ -28,15 +29,15 @@ function FollowButton({ userId }: Props) {
         enabled: isAuth && !!viewerId && viewerId !== userId,
         queryFn: async () => {
 
-            const res = await api.get<APIResponse>(`/api/follows/status/${userId}`)
+            const res = await api.get<APIResponse>(`/api/follow/status/${userId}`)
             return res.data.data?.isFollowing
         }
     })
 
     const { mutate: followMutation } = useMutation({
         mutationFn: async () => {
-  
-            const res = await api.post<APIResponse>(`/api/follows/${userId}`)
+
+            const res = await api.post<APIResponse>(`/api/follow/${userId}`)
             return res.data
         },
         onSuccess: (data) => {
@@ -47,6 +48,8 @@ function FollowButton({ userId }: Props) {
                 }
             })
             queryClient.invalidateQueries({ queryKey: queryKeys.follow.status(userId) })
+            queryClient.invalidateQueries({ queryKey: queryKeys.follow.following(viewerId) })
+            queryClient.invalidateQueries({ queryKey: queryKeys.follow.followers(userId) })
         },
         onError: (e) => {
             if (axios.isAxiosError(e)) {
@@ -88,7 +91,7 @@ function FollowButton({ userId }: Props) {
     }
 
     if (isInitialLoading) {
-        return <Button disabled>
+        return <Button disabled className={className}>
             <Spinner />
         </Button>
     }
@@ -103,6 +106,7 @@ function FollowButton({ userId }: Props) {
                 disabled={isFollowButtonDisabled}
                 onClick={handleClick}
                 variant={isFollowing ? "outline" : "default"}
+                className={className}
             >
                 {isFollowing ? "Following" : "Follow"}
             </Button>

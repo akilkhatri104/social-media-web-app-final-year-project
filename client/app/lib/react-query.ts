@@ -16,6 +16,8 @@ export const queryKeys = {
         detail: (id?: string | number) => ["posts", "detail", id] as const,
         likeStatus: (id?: string | number) =>
             ["posts", "like-status", id] as const,
+        byUserId: (userId?: string | number) =>
+            ["posts", "users", userId] as const,
     },
     follow: {
         followers: (userId: string) => ["followers", userId] as const,

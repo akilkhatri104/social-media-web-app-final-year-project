@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "~/components/ui/button";
 import { useMe } from "~/hooks/useMe";
 
 export default function Profile() {
@@ -52,9 +53,9 @@ export default function Profile() {
 
           </h2>
 
-          <button className="border px-4 py-1 mt-2 hover:bg-white hover:text-black">
+          <Button>
             Edit Profile
-          </button>
+          </Button>
 
           <div className="flex gap-8 mt-3">
 

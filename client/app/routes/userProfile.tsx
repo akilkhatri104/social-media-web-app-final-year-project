@@ -13,6 +13,9 @@ import {
 } from "~/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import FollowButton from "~/components/FollowButton";
+import { Button } from "~/components/ui/button";
+import { queryKeys } from "~/lib/react-query";
+import { Spinner } from "~/components/ui/spinner";
 
 export default function UserProfile() {
   const { username } = useParams();
@@ -22,7 +25,7 @@ export default function UserProfile() {
   const { data: session } = useMe();
 
   const { data: userData, isLoading: userLoading } = useQuery({
-    queryKey: ["userProfile", cleanUsername],
+    queryKey: queryKeys.users.byUsername(cleanUsername),
     queryFn: async () => {
       const res = await api.get(`/api/users/${cleanUsername}`);
       console.log("USER DATA:", res.data);
@@ -31,48 +34,26 @@ export default function UserProfile() {
     enabled: !!cleanUsername
   });
 
-  const { data: followerCount } = useQuery({
-    queryKey: ["followerCount", userData?.id],
-    queryFn: async () => {
-      const res = await api.get(`/api/follows/followers/count/${userData?.id}`);
-      console.log("FOLLOWER COUNT:", res.data);
-      return res.data.data?.count ?? 0;
-    },
-    enabled: !!userData?.id
-  });
-
-  const { data: followingCount } = useQuery({
-    queryKey: ["followingCount", userData?.id],
-    queryFn: async () => {
-      const res = await api.get(`/api/follows/following/count/${userData?.id}`);
-      console.log("FOLLOWING COUNT:", res.data);
-      return res.data.data?.count ?? 0;
-    },
-    enabled: !!userData?.id
-  });
-
   const { data: followersList, isLoading: followersLoading } = useQuery({
-    queryKey: ["followersList", userData?.id],
+    queryKey: queryKeys.follow.followers(userData?.id),
     queryFn: async () => {
-      const res = await api.get(`/api/follows/followers/${userData?.id}`);
+      const res = await api.get(`/api/follow/followers/${userData?.id}`);
       console.log("FOLLOWERS LIST:", res.data);
-      return res.data.data?.followers;
+      return res.data.data;
     },
-    enabled: !!userData?.id && followDialog === "followers"
   });
 
   const { data: followingList, isLoading: followingLoading } = useQuery({
-    queryKey: ["followingList", userData?.id],
+    queryKey: queryKeys.follow.following(userData?.id),
     queryFn: async () => {
-      const res = await api.get(`/api/follows/following/${userData?.id}`);
+      const res = await api.get(`/api/follow/following/${userData?.id}`);
       console.log("FOLLOWING LIST:", res.data);
-      return res.data.data?.following;
+      return res.data.data;
     },
-    enabled: !!userData?.id && followDialog === "following"
   });
 
   const { data: postsData, isLoading: postsLoading } = useQuery({
-    queryKey: ["userPosts", userData?.id],
+    queryKey: queryKeys.posts.byUserId(userData?.id),
     queryFn: async () => {
       const res = await api.get(`/api/posts/users/${userData?.id}`);
       return res.data.data;
@@ -100,82 +81,86 @@ export default function UserProfile() {
 
           {isOwnProfile ? (
             <Link to="/settings/profile">
-              <button className="border px-4 py-1 mt-2 hover:bg-white hover:text-black">
+              <Button variant="outline" className="mt-2">
                 Edit Profile
-              </button>
+              </Button>
             </Link>
           ) : (
-            <FollowButton userId={userData?.id} />
+            <FollowButton userId={userData?.id} className="mt-2" />
           )}
 
           <div className="flex gap-8 mt-3">
             <button onClick={() => setFollowDialog("followers")} className="hover:underline">
-              <span className="font-bold">{followerCount ?? 0}</span> followers
+              <span className="font-bold">{followersList?.count ?? 0}</span> followers
             </button>
             <button onClick={() => setFollowDialog("following")} className="hover:underline">
-              <span className="font-bold">{followingCount ?? 0}</span> following
+              <span className="font-bold">{followingList?.count ?? 0}</span> following
             </button>
           </div>
         </div>
       </div>
 
-      <Dialog open={followDialog === "followers"} onOpenChange={(o) => !o && setFollowDialog(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Followers</DialogTitle>
-          </DialogHeader>
-          {followersLoading && <p>Loading...</p>}
-          {!followersLoading && followersList?.length === 0 && (
-            <p className="text-muted-foreground">No followers yet</p>
-          )}
-          {followersList?.map((f: any) => (
-            <Link
-              key={f.id}
-              to={`/@${f.displayUsername}`}
-              onClick={() => setFollowDialog(null)}
-              className="flex items-center gap-3 py-2 hover:bg-muted px-2 rounded"
-            >
-              <Avatar>
-                <AvatarImage src={f.image} />
-                <AvatarFallback>{f.name?.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-semibold">{f.name}</p>
-                <p className="text-sm text-muted-foreground">@{f.displayUsername}</p>
-              </div>
-            </Link>
-          ))}
-        </DialogContent>
-      </Dialog>
+      {followersLoading ? <Spinner /> : (
+        <Dialog open={followDialog === "followers"} onOpenChange={(o) => !o && setFollowDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Followers</DialogTitle>
+            </DialogHeader>
+            {followersLoading && <p>Loading...</p>}
+            {!followersLoading && followersList && followersList?.followers?.length === 0 && (
+              <p className="text-muted-foreground">No followers yet</p>
+            )}
+            {followersList && followersList.followers?.map((f: any) => (
+              <Link
+                key={f.id}
+                to={`/@${f.displayUsername}`}
+                onClick={() => setFollowDialog(null)}
+                className="flex items-center gap-3 py-2 hover:bg-muted px-2 rounded"
+              >
+                <Avatar>
+                  <AvatarImage src={f.image} />
+                  <AvatarFallback>{f.name?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold">{f.name}</p>
+                  <p className="text-sm text-muted-foreground">@{f.displayUsername}</p>
+                </div>
+              </Link>
+            ))}
+          </DialogContent>
+        </Dialog>
+      )}
 
-      <Dialog open={followDialog === "following"} onOpenChange={(o) => !o && setFollowDialog(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Following</DialogTitle>
-          </DialogHeader>
-          {followingLoading && <p>Loading...</p>}
-          {!followingLoading && followingList?.length === 0 && (
-            <p className="text-muted-foreground">Not following anyone yet</p>
-          )}
-          {followingList?.map((f: any) => (
-            <Link
-              key={f.id}
-              to={`/@${f.displayUsername}`}
-              onClick={() => setFollowDialog(null)}
-              className="flex items-center gap-3 py-2 hover:bg-muted px-2 rounded"
-            >
-              <Avatar>
-                <AvatarImage src={f.image} />
-                <AvatarFallback>{f.name?.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-semibold">{f.name}</p>
-                <p className="text-sm text-muted-foreground">@{f.displayUsername}</p>
-              </div>
-            </Link>
-          ))}
-        </DialogContent>
-      </Dialog>
+      {followingLoading ? <Spinner /> : (
+        <Dialog open={followDialog === "following"} onOpenChange={(o) => !o && setFollowDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Following</DialogTitle>
+            </DialogHeader>
+            {followingLoading && <p>Loading...</p>}
+            {!followingLoading && followingList && followingList?.following?.length === 0 && (
+              <p className="text-muted-foreground">Not following anyone yet</p>
+            )}
+            {followingList && followingList.following?.map((f: any) => (
+              <Link
+                key={f.id}
+                to={`/@${f.displayUsername}`}
+                onClick={() => setFollowDialog(null)}
+                className="flex items-center gap-3 py-2 hover:bg-muted px-2 rounded"
+              >
+                <Avatar>
+                  <AvatarImage src={f.image} />
+                  <AvatarFallback>{f.name?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold">{f.name}</p>
+                  <p className="text-sm text-muted-foreground">@{f.displayUsername}</p>
+                </div>
+              </Link>
+            ))}
+          </DialogContent>
+        </Dialog>
+      )}
 
       <div className="flex gap-10 px-10 border-b pb-2">
         {["posts", "comments", "likes"].map((tab) => (

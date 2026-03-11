@@ -17,7 +17,7 @@ import {
     DialogFooter
 } from "~/components/ui/dialog"
 import { Logo } from "./Logo"
-import { BookmarkIcon, HomeIcon } from "lucide-react"
+import { BookmarkIcon, HomeIcon, User2 } from "lucide-react"
 import { NavLink, useLocation } from "react-router"
 import React from "react"
 import { useMe } from "~/hooks/useMe"
@@ -26,22 +26,28 @@ import PostComposer from "./PostComposer"
 import { Button } from "~/components/ui/button"
 import LogoutButton from "./LogoutButton"
 
-const sidebarItems = [
-    {
-        icon: <HomeIcon />,
-        name: "Home",
-        to: "/home"
-    },
-    {
-        icon: <BookmarkIcon />,
-        name: "Bookmarks",
-        to: "/bookmarks"
-    }
-]
+
 
 export function AppSidebar() {
     const location = useLocation()
-    const { isInitialLoading, isAuth } = useMe()
+    const { isInitialLoading, isAuth, data: user } = useMe()
+    const sidebarItems = [
+        {
+            icon: <HomeIcon />,
+            name: "Home",
+            to: "/home"
+        },
+        {
+            icon: <BookmarkIcon />,
+            name: "Bookmarks",
+            to: "/bookmarks"
+        },
+        {
+            icon: <User2 />,
+            name: "Profile",
+            to: `/@${!isInitialLoading && isAuth ? user?.displayUsername : ""}`
+        }
+    ]
     if (isInitialLoading)
         return <Spinner />
 
@@ -78,6 +84,9 @@ export function AppSidebar() {
                         </NavLink>
                     ))}
                 </SidebarGroup>
+                <SidebarGroup />
+            </SidebarContent>
+            <SidebarFooter>
                 <Dialog>
                     <DialogTrigger asChild >
                         <Button
@@ -94,9 +103,8 @@ export function AppSidebar() {
                     </DialogContent>
                 </Dialog>
                 <LogoutButton variant="outline" />
-                <SidebarGroup />
-            </SidebarContent>
-            <SidebarFooter />
+            </SidebarFooter>
+
         </Sidebar>
     )
 }

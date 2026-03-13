@@ -10,6 +10,10 @@ export const fetchCurrentUser = async () => {
 
         return response.data.data.user;
     } catch (error) {
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+            return null;
+        }
+
         throw error;
     }
 };
@@ -18,14 +22,11 @@ export function useMe() {
     const query = useQuery({
         queryKey: queryKeys.auth.me,
         queryFn: fetchCurrentUser,
-        retry: false,
-        staleTime: 1000 * 60 * 5, // 5 min
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
     });
+
     return {
         ...query,
-        isAuth: query.isSuccess && !!query.data,
-        isInitialLoading: query.isLoading && !query.isPaused,
+        isAuth: !!query.data,
+        isInitialLoading: query.isPending && !query.isPaused,
     };
 }

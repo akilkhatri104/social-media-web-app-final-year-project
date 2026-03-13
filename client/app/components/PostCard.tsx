@@ -162,7 +162,7 @@ const PostCard = ({ post }: Props) => {
 
     const { data: likeStatus, isPending } = useQuery({
         queryFn: async () => {
-            const response = await api.get<APIResponse>(`/api/likes/likeStatus/${post?.id}`);
+            const response = await api.get<APIResponse>(`/api/likes/status/${post?.id}`);
             return !!response.data.data?.likeStatus;
         },
         queryKey: queryKeys.posts.likeStatus(post.id),

@@ -1,4 +1,4 @@
-import { Outlet, Navigate, useLocation } from "react-router"
+import { Navigate, Outlet, useLocation } from "react-router"
 import { AppSidebar } from "~/components/AppSidebar"
 import { ExploreSidebar } from "~/components/ExploreSidebar"
 import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar"
@@ -7,11 +7,12 @@ import VerifyEmailPrompt from "~/components/VerifyEmailPrompt"
 
 export default function AppLayout() {
     const { isAuth, isInitialLoading, data: user } = useMe()
+    const location = useLocation()
 
     if (isInitialLoading) return null
 
     if (!isAuth) {
-        return <Navigate to="/signin" state={{ from: location }} replace />
+        return <Navigate to="/signin" replace state={{ from: location }} />
     }
 
     return (

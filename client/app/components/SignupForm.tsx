@@ -20,7 +20,7 @@ import { NavLink, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { queryClient, queryKeys } from '~/lib/react-query'
 import { useMe } from '~/hooks/useMe'
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 
 const MAX_FILE_SIZE = 5000000;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -33,7 +33,10 @@ const formSchema = z.object({
     username: z
         .string()
         .min(3, "Username must be at least 3 characters.")
-        .max(32, "Username must be at most 32 characters."),
+        .max(32, "Username must be at most 32 characters.")
+        .refine((username) => /^(?!.*\.\.)(?!.*\.$)[^\W][\w.]{0,29}$/gim.test(username), {
+            message: 'Usernames can contain characters a-z, 0-9, underscores and periods. The username cannot start with a period nor end with a period. It must also not have more than one period sequentially. Max length is 30 chars.',
+        }),
     password: z
         .string()
         .min(8, "Password must be at least 8 characters.")

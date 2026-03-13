@@ -10,6 +10,7 @@ import { Input } from "./ui/input"
 import { api } from "~/lib/axios"
 import type { APIResponse } from "~/lib/types"
 import axios from "axios"
+import { queryClient, queryKeys } from "~/lib/react-query"
 
 type SubmitButtonProps = {
     idleLabel: string
@@ -60,7 +61,10 @@ export function VerifyEmailForm() {
             const response = await api.post<APIResponse>('/api/users/verify-email', { otp })
 
             toast.success(response.data.message)
-            navigate('/')
+            const verifiedUser = response.data.data?.user
+            queryClient.setQueryData(queryKeys.auth.me, verifiedUser)
+            queryClient.invalidateQueries({ queryKey: queryKeys.auth.me })
+            navigate('/home')
         } catch (error) {
             console.error(error)
             if (axios.isAxiosError(error)) {

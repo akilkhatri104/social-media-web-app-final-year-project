@@ -5,9 +5,7 @@ function verifyEmail() {
 
     return (
         <div className="flex justify-center items-center">
-            <ProtectedRoute>
-                <VerifyEmailForm />
-            </ProtectedRoute>
+            <VerifyEmailForm />
         </div>
     )
 }

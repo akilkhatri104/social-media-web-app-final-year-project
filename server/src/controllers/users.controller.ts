@@ -93,6 +93,13 @@ export async function signup(req: Request, res: Response) {
       throw new AppError('Email is not valid', 400);
     }
 
+    if (!username.match(/^(?!.*\.\.)(?!.*\.$)[^\W][\w.]{0,29}$/gim)) {
+      throw new AppError(
+        'Usernames can contain characters a-z, 0-9, underscores and periods. The username cannot start with a period nor end with a period. It must also not have more than one period sequentially. Max length is 30 chars.',
+        400,
+      );
+    }
+
     if (
       !password.match(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/gm)
     ) {
@@ -269,7 +276,7 @@ export async function verifyEmailVerificationOTP(req: Request, res: Response) {
       throw new AppError('Email already verified', 400);
     }
 
-    const { success: isOTPValid } = await auth.api.checkVerificationOTP({
+    const isOTPValid = await auth.api.checkVerificationOTP({
       body: {
         email: req.session.user.email,
         otp,
@@ -277,7 +284,7 @@ export async function verifyEmailVerificationOTP(req: Request, res: Response) {
       },
     });
 
-    if (!isOTPValid) {
+    if (!isOTPValid.success) {
       throw new AppError('OTP not valid', 400);
     }
 
@@ -286,15 +293,24 @@ export async function verifyEmailVerificationOTP(req: Request, res: Response) {
         email: req.session.user.email,
         otp,
       },
+      headers: req.headers,
+      returnHeaders: true,
     });
 
-    if (!response.status) {
+    if (!response.response.status) {
       throw new AppError('Error while verifying email');
+    }
+
+    const setCookies = response.headers.getSetCookie();
+    if (setCookies.length) {
+      res.setHeader('Set-Cookie', setCookies);
     }
 
     return res
       .status(200)
-      .json(new APIResponse('Email verified successfully', 200));
+      .json(
+        new APIResponse('Email verified successfully', 200, response.response),
+      );
   } catch (error) {
     console.error('verifyEmailVerificationOTP :: ', error);
     throw error instanceof AppError || error instanceof APIError
@@ -410,13 +426,16 @@ export async function getUserByUsername(req: Request, res: Response) {
       .where(eq(user.displayUsername, username))
       .limit(1);
 
-    console.log("RESULT:", result);
-    console.log("ALL USERS:");
-    const all = await db.select({ 
-      username: user.username, 
-      displayUsername: user.displayUsername,
-      name: user.name 
-    }).from(user).limit(5);
+    console.log('RESULT:', result);
+    console.log('ALL USERS:');
+    const all = await db
+      .select({
+        username: user.username,
+        displayUsername: user.displayUsername,
+        name: user.name,
+      })
+      .from(user)
+      .limit(5);
     console.log(all);
 
     if (!result[0]) {
@@ -433,8 +452,8 @@ export async function getUserByUsername(req: Request, res: Response) {
           displayUsername: foundUser.displayUsername,
           image: foundUser.image,
           email: foundUser.email,
-        }
-      })
+        },
+      }),
     );
   } catch (error) {
     console.error('getUserByUsername :: ', error);

@@ -1,21 +1,18 @@
-import { useEffect } from "react"
-import { useNavigate } from "react-router"
+import { Navigate, useLocation } from "react-router"
 import { useMe } from "~/hooks/useMe"
 import { Spinner } from "./ui/spinner"
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const { isAuth, isInitialLoading } = useMe()
-    const navigate = useNavigate()
-
-    useEffect(() => {
-        if (!isInitialLoading && !isAuth) {
-            navigate('/signin')
-        }
-    }, [isAuth, isInitialLoading, navigate])
+    const location = useLocation()
 
     if (isInitialLoading) return <Spinner />
 
-    return !isAuth ? null : children
+    if (!isAuth) {
+        return <Navigate to="/signin" replace state={{ from: location }} />
+    }
+
+    return children
 }
 
 export default ProtectedRoute

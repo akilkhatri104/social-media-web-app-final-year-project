@@ -24,7 +24,7 @@ const LogoutButton = ({ variant }: Props) => {
 
             sessionStorage.clear()
             toast.success(response.data.message)
-            queryClient.invalidateQueries({ queryKey: queryKeys.auth.me })
+            queryClient.setQueryData(queryKeys.auth.me, null)
             navigate('/')
         } catch (error) {
             if (axios.isAxiosError(error)) {

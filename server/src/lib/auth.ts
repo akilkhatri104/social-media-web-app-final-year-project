@@ -7,6 +7,7 @@ import mailSender from './mailSender.ts';
 import { AppError } from '../middlewares/errorHandler.ts';
 
 const frontendURL = process.env.FRONTEND_URL!;
+const backendURL = process.env.BACKEND_URL!;
 const isSecureOrigin = frontendURL.startsWith('https://');
 
 export const auth = betterAuth({
@@ -17,7 +18,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  baseURL: frontendURL,
+  baseURL: backendURL,
   trustedOrigins: [frontendURL],
   session: {
     cookieCache: {
@@ -27,7 +28,7 @@ export const auth = betterAuth({
       secure: isSecureOrigin,
       sameSite: isSecureOrigin ? 'none' : 'lax',
       httpOnly: true,
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 60 * 60 * 24,
     },
   },
   user: {

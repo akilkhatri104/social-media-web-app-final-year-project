@@ -1,9 +1,9 @@
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_BACKEND_URL;
+const baseURL: string | undefined = import.meta.env.VITE_BACKEND_URL;
 
-if (!baseURL || typeof baseURL !== "string" || !URL.canParse(baseURL)) {
-    throw new Error("backend URL not provided");
+if (baseURL && !URL.canParse(baseURL)) {
+    throw new Error("Invalid backend URL provided");
 }
 
 export const api = axios.create({

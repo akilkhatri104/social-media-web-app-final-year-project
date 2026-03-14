@@ -24,6 +24,7 @@ import { useEffect, useState } from "react";
 import { queryKeys } from "~/lib/react-query";
 import RepostFeedCard from "~/components/RepostFeedCard";
 import { Spinner } from "~/components/ui/spinner";
+import { useDocumentTitle } from "~/lib/title";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -35,6 +36,9 @@ export function meta({ }: Route.MetaArgs) {
 export default function Home() {
   const [tab, setTab] = useState('for-you')
   const [mounted, setMounted] = useState(false)
+  const pageTitle = tab === "following" ? "Home (Following)" : "Home (For You)";
+
+  useDocumentTitle(pageTitle);
 
   useEffect(() => {
     const savedTab = sessionStorage.getItem("default-tab")
@@ -43,10 +47,6 @@ export default function Home() {
     }
     setMounted(true)
   }, [])
-
-  useEffect(() => {
-    document.title = `Home / ${tab}`
-  }, [tab])
 
   const {
     data,

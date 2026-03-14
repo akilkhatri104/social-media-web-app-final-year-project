@@ -6,8 +6,8 @@ import PostComposer from "../components/PostComposer";
 import { Loader2 } from "lucide-react";
 import { Separator } from "~/components/ui/separator";
 import type { Route } from "./+types/post.$id";
-import { useEffect } from "react";
 import { queryKeys } from "~/lib/react-query";
+import { truncateTitleSegment, useDocumentTitle } from "~/lib/title";
 
 export async function clientLoader({ params }: Route.ClientActionArgs) {
     try {
@@ -32,13 +32,13 @@ export default function PostPage() {
         initialData
     });
 
-    useEffect(() => {
-        if (!isPending && data) {
-            document.title = `${data.author.name}: ${data.content.slice(0, 40)}...`;
-        } else {
-            document.title = `Post not found`
-        }
-    }, [data])
+    const postTitle = isPending
+        ? "Post"
+        : data
+            ? `Post by ${data.author.name}: ${truncateTitleSegment(data.content, 50)}`
+            : "Post Not Found";
+
+    useDocumentTitle(postTitle);
 
     if (isPending) {
         return (

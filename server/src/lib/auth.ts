@@ -6,6 +6,9 @@ import { emailOTP, username } from 'better-auth/plugins';
 import mailSender from './mailSender.ts';
 import { AppError } from '../middlewares/errorHandler.ts';
 
+const frontendURL = process.env.FRONTEND_URL!;
+const isSecureOrigin = frontendURL.startsWith('https://');
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: 'pg',
@@ -14,17 +17,24 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  baseURL: process.env.FRONTEND_URL!,
-  trustedOrigins: [process.env.FRONTEND_URL!],
+  baseURL: frontendURL,
+  trustedOrigins: [frontendURL],
   session: {
     cookieCache: {
       enabled: true,
     },
     cookie: {
-      secure: true,
-      sameSite: 'none',
+      secure: isSecureOrigin,
+      sameSite: isSecureOrigin ? 'none' : 'lax',
       httpOnly: true,
       maxAge: 60 * 60 * 24 * 7,
+    },
+  },
+  user: {
+    additionalFields: {
+      bio: {
+        type: 'string',
+      },
     },
   },
   plugins: [

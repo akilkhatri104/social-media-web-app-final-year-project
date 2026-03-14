@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PostCard from "~/components/PostCard";
 import { Separator } from "~/components/ui/separator";
 import { useMe } from "~/hooks/useMe";
@@ -16,6 +16,7 @@ import FollowButton from "~/components/FollowButton";
 import { Button } from "~/components/ui/button";
 import { queryKeys } from "~/lib/react-query";
 import { Spinner } from "~/components/ui/spinner";
+import { useDocumentTitle } from "~/lib/title";
 
 export default function UserProfile() {
   const { username } = useParams();
@@ -33,6 +34,14 @@ export default function UserProfile() {
     },
     enabled: !!cleanUsername
   });
+
+  const profileTitle = userLoading
+    ? "Profile"
+    : userData
+      ? `${userData.name} (@${userData.displayUsername})`
+      : "User Not Found";
+
+  useDocumentTitle(profileTitle);
 
   const { data: followersList, isLoading: followersLoading } = useQuery({
     queryKey: queryKeys.follow.followers(userData?.id),
@@ -97,6 +106,11 @@ export default function UserProfile() {
               <span className="font-bold">{followingList?.count ?? 0}</span> following
             </button>
           </div>
+          {userData?.bio && (
+            <div className="text-muted-foreground mt-3">
+              {userData.bio}
+            </div>
+          )}
         </div>
       </div>
 
@@ -161,6 +175,8 @@ export default function UserProfile() {
           </DialogContent>
         </Dialog>
       )}
+
+
 
       <div className="flex gap-10 px-10 border-b pb-2">
         {["posts", "comments", "likes"].map((tab) => (

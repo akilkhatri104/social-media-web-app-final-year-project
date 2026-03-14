@@ -5,7 +5,7 @@ import { APIResponse } from '../lib/apiResponse.ts';
 import { deleteFromCloudinary, uploadToCloudinary } from '../lib/cloudinary.ts';
 import { db } from '../lib/db/client.ts';
 import { user } from '../lib/auth-schema.ts';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { APIError } from 'better-auth';
 
 export async function me(req: Request, res: Response) {
@@ -127,7 +127,7 @@ export async function signup(req: Request, res: Response) {
 
     const response = await auth.api.signUpEmail({
       returnHeaders: true,
-      body: { email, password, name, image: imgUrl, username },
+      body: { email, password, name, image: imgUrl, username, bio: '' },
     });
 
     const setCookies = response.headers.getSetCookie();
@@ -182,17 +182,18 @@ export async function updateUser(req: Request, res: Response) {
       throw new AppError('Request body is empty', 400);
     }
 
-    const { username, name } = req.body;
+    const { username, name, bio } = req.body;
 
-    if (!username && !name && !req.file) {
+    if (!username && !name && !bio && !req.file) {
       throw new AppError('No updated details provided', 400);
     }
 
     if (req.file && !req.file.mimetype.startsWith('image/')) {
       throw new AppError('Profile picture must be an image');
     }
-    let imgUrl = null;
+    let imgUrl = undefined;
     if (req.file && req.file.mimetype.startsWith('image/')) {
+      const oldImgUrl = req.session.user.image;
       const result = await uploadToCloudinary(req.file.buffer);
       if (!result) {
         throw new AppError('Error while uploading new image');
@@ -209,6 +210,7 @@ export async function updateUser(req: Request, res: Response) {
         username,
         name,
         image: imgUrl,
+        bio,
       },
       headers: req.headers,
     });
@@ -217,7 +219,13 @@ export async function updateUser(req: Request, res: Response) {
       throw new AppError('Error while updating details', 500);
     }
 
-    return res.status(200).json(new APIResponse('User details updated', 200));
+    const userResult = await db.query.user.findFirst({
+      where: eq(user.id, req.session.user.id),
+    });
+
+    return res
+      .status(200)
+      .json(new APIResponse('User details updated', 200, { user: userResult }));
   } catch (error) {
     console.error('updateUser :: ', error);
     throw error instanceof AppError || error instanceof APIError
@@ -420,39 +428,20 @@ export async function getUserByUsername(req: Request, res: Response) {
       throw new AppError('Username is required', 400);
     }
 
-    const result = await db
-      .select()
-      .from(user)
-      .where(eq(user.displayUsername, username))
-      .limit(1);
+    const result = await db.query.user.findFirst({
+      where: or(
+        eq(user.username, username),
+        eq(user.displayUsername, username),
+      ),
+    });
 
-    console.log('RESULT:', result);
-    console.log('ALL USERS:');
-    const all = await db
-      .select({
-        username: user.username,
-        displayUsername: user.displayUsername,
-        name: user.name,
-      })
-      .from(user)
-      .limit(5);
-    console.log(all);
-
-    if (!result[0]) {
+    if (!result) {
       throw new AppError('User not found', 404);
     }
 
-    const foundUser = result[0];
-
     return res.status(200).json(
       new APIResponse('User fetched successfully', 200, {
-        user: {
-          id: foundUser.id,
-          name: foundUser.name,
-          displayUsername: foundUser.displayUsername,
-          image: foundUser.image,
-          email: foundUser.email,
-        },
+        user: result,
       }),
     );
   } catch (error) {

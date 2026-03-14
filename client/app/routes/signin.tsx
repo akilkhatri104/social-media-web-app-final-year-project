@@ -2,6 +2,7 @@ import React from 'react'
 import { SigninForm } from '~/components/SigninForm'
 import type { Route } from './+types/signin';
 import GuestRoute from '~/components/GuestRoute';
+import { useDocumentTitle } from '~/lib/title';
 
 
 export function meta({ }: Route.MetaArgs) {
@@ -12,6 +13,8 @@ export function meta({ }: Route.MetaArgs) {
 }
 
 function signin() {
+    useDocumentTitle("Sign In");
+
     return (
         <div className='flex justify-center items-center'>
             <GuestRoute>

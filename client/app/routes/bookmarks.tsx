@@ -6,8 +6,13 @@ import PostCard from "~/components/PostCard";
 import { Separator } from "~/components/ui/separator";
 import { queryKeys } from "~/lib/react-query";
 import { Spinner } from "~/components/ui/spinner";
+import type { Route } from "./+types/bookmarks";
+import { useDocumentTitle } from "~/lib/title";
+
 
 export default function Bookmarks() {
+  useDocumentTitle("Bookmarks");
+
   const { data, isPending, isError } = useQuery({
     queryKey: queryKeys.bookmarks.all,
     queryFn: async () => {

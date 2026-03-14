@@ -1,14 +1,12 @@
 import * as z from 'zod'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Label } from './ui/label'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
 import {
     Field,
     FieldDescription,
     FieldError,
-    FieldGroup,
     FieldLabel,
     FieldSet,
 } from "./ui/field"
@@ -17,10 +15,8 @@ import type { APIResponse } from '~/lib/types'
 import { toast } from 'sonner'
 import axios from 'axios'
 import { NavLink, useNavigate } from 'react-router'
-import { useQuery } from '@tanstack/react-query'
 import { queryClient, queryKeys } from '~/lib/react-query'
-import { useMe } from '~/hooks/useMe'
-import { use, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const MAX_FILE_SIZE = 5000000;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -92,11 +88,7 @@ export const SignupForm = () => {
             if (data.image) {
                 formData.append("image", data.image)
             }
-            const response = await api.post<APIResponse>('/api/users/signup', formData, {
-                headers: {
-                    "Content-Type": "multipart/formdata"
-                }
-            })
+            const response = await api.post<APIResponse>('/api/users/signup', formData)
 
 
             if (!response.data.success) {
@@ -104,15 +96,23 @@ export const SignupForm = () => {
                 return
             }
 
+            const signedUpUser = response.data.data?.user
+            if (!signedUpUser) {
+                throw new Error("Signup succeeded but no user was returned")
+            }
+
+            queryClient.setQueryData(queryKeys.auth.me, signedUpUser)
             toast.success(response.data.message)
-            queryClient.invalidateQueries({ queryKey: queryKeys.auth.me })
-            navigate('/home')
+            navigate('/home', { replace: true })
         } catch (error) {
             console.error(error)
             if (axios.isAxiosError(error)) {
-                toast.error(error.response?.data.message)
-            } else
+                toast.error(error.response?.data?.message ?? error.message ?? "Unable to sign up")
+            } else if (error instanceof Error) {
+                toast.error(error.message)
+            } else {
                 toast.error("Unknown error")
+            }
         } finally {
             setIsFormDisabled(false)
             toast.dismiss("signup-loading")

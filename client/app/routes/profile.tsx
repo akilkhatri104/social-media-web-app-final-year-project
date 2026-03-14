@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { useMe } from "~/hooks/useMe";
+import { useDocumentTitle } from "~/lib/title";
 
 export default function Profile() {
 
   const [activeTab, setActiveTab] = useState("posts");
   const { data, isLoading } = useMe();
+  const profileTitle = data?.name ? `${data.name} (@${data.displayUsername})` : "Profile";
+
+  useDocumentTitle(profileTitle);
 
   const user = data?.data?.user;
 

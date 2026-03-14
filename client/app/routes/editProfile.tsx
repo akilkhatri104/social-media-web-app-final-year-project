@@ -9,9 +9,12 @@ import { queryClient, queryKeys } from "~/lib/react-query";
 import { useNavigate } from "react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import axios from "axios";
+import { useDocumentTitle } from "~/lib/title";
 
 export default function EditProfile() {
-  const { data: user, isLoading } = useMe(); 
+  useDocumentTitle("Edit Profile");
+
+  const { data: user, isLoading } = useMe();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -26,7 +29,7 @@ export default function EditProfile() {
     if (user) {
       setName(user.name || "");
       setUsername(user.username || "");
-      setBio(user.bio || "");    
+      setBio(user.bio || "");
       setImagePreview(user.image || null);
     }
   }, [user]);
@@ -49,12 +52,15 @@ export default function EditProfile() {
       if (bio !== undefined) formData.append("bio", bio);
       if (imageFile) formData.append("image", imageFile);
 
-      await api.put("/api/users", formData, {
+      const res = await api.put("/api/users", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       toast.success("Profile updated successfully!");
+      queryClient.setQueryData(queryKeys.auth.me, res.data?.data?.user)
+      queryClient.setQueryData(queryKeys.users.byUsername(username), res.data?.data?.user)
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.byUsername(user?.username) })
       navigate(`/@${username}`);
     } catch (error) {
       toast.error(

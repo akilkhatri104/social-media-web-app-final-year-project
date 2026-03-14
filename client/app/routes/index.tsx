@@ -2,6 +2,7 @@ import { ArrowRight, MessageSquare, ShieldCheck, Users } from "lucide-react";
 import { NavLink } from "react-router";
 import { Button } from "~/components/ui/button";
 import type { Route } from "./+types/index";
+import { useDocumentTitle } from "~/lib/title";
 
 const highlights = [
   {
@@ -35,6 +36,8 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Index() {
+  useDocumentTitle();
+
   return (
     <main className="relative overflow-hidden">
       <div className="absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(circle_at_top,theme(colors.primary/.18),transparent_58%)]" />

@@ -12,12 +12,14 @@ import {
   getUserByUsername,
 } from '../controllers/users.controller.js';
 import { verifyAuth } from '../middlewares/verifyAuth.ts';
+import { noCache } from '../middlewares/noCache.ts';
 import { upload } from '../lib/multer.ts';
 
 const router = Router();
 const publicRouter = Router();
 const protectedRouter = Router();
 
+protectedRouter.use(noCache);
 protectedRouter.use(verifyAuth);
 
 publicRouter.post('/signin', signin);

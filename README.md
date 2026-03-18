@@ -105,11 +105,19 @@ To run this project, you will need to add the following environment variables to
 
 `VITE_FRONTEND_URL` : URL of the frontend
 
+For Vercel deployments using `client/vercel.json`, leave `VITE_BACKEND_URL` unset so the client uses same-origin `/api/*` requests and Vercel rewrites them to the backend.
+
 ### `server/.env`
 
 `PORT` : Port at which the server will run on localhost
 
 `FRONTEND_URL` : Base URL of your frontend
+
+Set this to the exact production Vercel URL used by users, with no trailing slash.
+
+`BACKEND_URL` : Base URL of your backend
+
+Set this to the exact DigitalOcean API origin, with no trailing slash.
 
 `DATABASE_URL` : Connection string for the Postgres database
 

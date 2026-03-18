@@ -11,8 +11,10 @@ import followsRouter from './routers/follows.router.js';
 import feedRouter from './routers/feed.router.js';
 import likesRouter from './routers/likes.router.js';
 import { errorHandler } from './middlewares/errorHandler.js';
+import { noCache } from './middlewares/noCache.ts';
 
 const app = express();
+app.set('etag', false);
 
 const FRONTEND_URL = process.env.FRONTEND_URL;
 if (!FRONTEND_URL || typeof FRONTEND_URL !== 'string') {
@@ -29,7 +31,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // mount BetterAuth
-app.all('/api/auth/*splat', toNodeHandler(auth));
+app.all('/api/auth/*splat', noCache, toNodeHandler(auth));
 
 app.get('/', (req, res) => {
   res.send('Hello World TSX!');

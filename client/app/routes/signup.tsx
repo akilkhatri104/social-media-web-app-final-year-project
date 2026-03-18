@@ -9,9 +9,7 @@ function signup() {
     return (
         <div>
             <div className='flex justify-center items-center'>
-                <GuestRoute>
-                    <SignupForm />
-                </GuestRoute>
+                <SignupForm />
             </div>
         </div>
     )

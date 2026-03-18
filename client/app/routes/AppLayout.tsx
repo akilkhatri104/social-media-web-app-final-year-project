@@ -4,12 +4,17 @@ import { ExploreSidebar } from "~/components/ExploreSidebar"
 import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar"
 import { useMe } from "~/hooks/useMe"
 import VerifyEmailPrompt from "~/components/VerifyEmailPrompt"
+import { Spinner } from "~/components/ui/spinner"
 
 export default function AppLayout() {
     const { isAuth, isInitialLoading, data: user } = useMe()
     const location = useLocation()
 
-    if (isInitialLoading) return null
+    if (isInitialLoading) return (
+        <div className="min-h-screen min-w-screen flex items-center justify-center">
+            <Spinner />
+        </div>
+    )
 
     if (!isAuth) {
         return <Navigate to="/signin" replace state={{ from: location }} />

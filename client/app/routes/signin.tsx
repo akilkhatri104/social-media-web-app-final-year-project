@@ -17,9 +17,7 @@ function signin() {
 
     return (
         <div className='flex justify-center items-center'>
-            <GuestRoute>
-                <SigninForm />
-            </GuestRoute>
+            <SigninForm />
         </div>
     )
 }

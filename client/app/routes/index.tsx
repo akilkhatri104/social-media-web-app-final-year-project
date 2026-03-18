@@ -25,7 +25,7 @@ const highlights = [
   },
 ];
 
-export function meta({}: Route.MetaArgs) {
+export function meta({ }: Route.MetaArgs) {
   return [
     { title: "PU Connect" },
     {

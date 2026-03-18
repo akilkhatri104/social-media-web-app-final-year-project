@@ -20,6 +20,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL;
 if (!FRONTEND_URL || typeof FRONTEND_URL !== 'string') {
   throw new Error('FRONTEND_URL env not set');
 }
+app.all('/api/auth/*splat', noCache, toNodeHandler(auth));
 app.use(
   cors({
     origin: [FRONTEND_URL],
@@ -31,7 +32,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // mount BetterAuth
-app.all('/api/auth/*splat', noCache, toNodeHandler(auth));
 
 app.get('/', (req, res) => {
   res.send('Hello World TSX!');

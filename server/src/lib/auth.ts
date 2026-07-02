@@ -82,5 +82,4 @@ export const auth = betterAuth({
       },
     }),
   ],
-  advanced: { disableOriginCheck: true },
 });

@@ -10,6 +10,7 @@ export default [
         index("./routes/index.tsx"),
         route("/signin", "./routes/signin.tsx"),
         route("/signup", "./routes/signup.tsx"),
+        route("/forgot-password", "./routes/forgot-password.tsx"),
     ]),
 
     layout("./routes/AppLayout.tsx", [

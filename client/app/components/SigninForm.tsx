@@ -73,8 +73,11 @@ export const SigninForm = () => {
     return (
         <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col p-3 bg-card text-card-foreground rounded-xl w-full md:w-1/3'>
             <div className='text-center'>
-                <h1 className='font-bold text-lg'>Signin</h1>
-                <p className='text-sm'>Don't have an account? Signup <NavLink to='/signup' className='text   -blue-300'>here</NavLink></p>
+        <h1 className='font-bold text-lg'>Signin</h1>
+        <p className='text-sm'>Don't have an account? Signup <NavLink to='/signup' className='text-blue-300'>here</NavLink></p>
+        <p className='text-sm mt-2'>
+          <NavLink to='/forgot-password' className='text-blue-500 underline'>Forgot Password?</NavLink>
+        </p>
             </div>
 
             <FieldSet className='mt-3'>

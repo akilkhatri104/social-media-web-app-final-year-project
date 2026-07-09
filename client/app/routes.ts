@@ -15,6 +15,8 @@ export default [
 
     layout("./routes/AppLayout.tsx", [
         route("/home", "./routes/home.tsx"),
+        route("/explore", "./routes/explore.tsx"),
+        route("/hashtag/:tag", "./routes/hashtag.$tag.tsx"),
         route("/verify-email", "./routes/verify-email.tsx"),
         route("/post/:id", "./routes/post.$id.tsx"),
         route("/bookmarks", "./routes/bookmarks.tsx"),

@@ -19,6 +19,13 @@ export const queryKeys = {
         byUserId: (userId?: string | number) =>
             ["posts", "users", userId] as const,
     },
+    explore: {
+        summary: ["explore", "summary"] as const,
+    },
+    hashtags: {
+        trending: ["hashtags", "trending"] as const,
+        posts: (tag?: string) => ["hashtags", "posts", tag] as const,
+    },
     follow: {
         followers: (userId: string) => ["followers", userId] as const,
         following: (userId: string) => ["following", userId] as const,

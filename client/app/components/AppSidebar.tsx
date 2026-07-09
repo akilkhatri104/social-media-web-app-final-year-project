@@ -17,7 +17,7 @@ import {
     DialogFooter
 } from "~/components/ui/dialog"
 import { Logo } from "./Logo"
-import { BookmarkIcon, HomeIcon, User2 } from "lucide-react"
+import { BookmarkIcon, HomeIcon, SparklesIcon, User2 } from "lucide-react"
 import { NavLink, useLocation } from "react-router"
 import React from "react"
 import { useMe } from "~/hooks/useMe"
@@ -41,6 +41,11 @@ export function AppSidebar() {
             icon: <BookmarkIcon />,
             name: "Bookmarks",
             to: "/bookmarks"
+        },
+        {
+            icon: <SparklesIcon />,
+            name: "Explore",
+            to: "/explore"
         },
         {
             icon: <User2 />,

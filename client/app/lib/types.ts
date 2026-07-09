@@ -36,3 +36,13 @@ export type FeedItem =
           repostedBy: any;
           originalPost: PostDto;
       };
+
+export type TrendingHashtag = {
+    name: string;
+    postCount: number;
+};
+
+export type ExploreResponse = {
+    trendingHashtags: TrendingHashtag[];
+    popularPosts: PostDto[];
+};

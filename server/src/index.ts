@@ -9,6 +9,8 @@ import repostRouter from './routers/reposts.router.ts';
 import bookmarksRouter from './routers/bookmarks.router.ts';
 import followsRouter from './routers/follows.router.js';
 import feedRouter from './routers/feed.router.js';
+import exploreRouter from './routers/explore.router.js';
+import hashtagsRouter from './routers/hashtags.router.js';
 import likesRouter from './routers/likes.router.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { noCache } from './middlewares/noCache.ts';
@@ -43,6 +45,8 @@ app.use('/api/posts', postRouter);
 app.use('/api/follow', followsRouter);
 app.use('/api/likes', likesRouter);
 app.use('/api/feed', feedRouter);
+app.use('/api/explore', exploreRouter);
+app.use('/api/hashtags', hashtagsRouter);
 app.use('/api/repost', repostRouter);
 app.use('/api/bookmarks', bookmarksRouter);
 

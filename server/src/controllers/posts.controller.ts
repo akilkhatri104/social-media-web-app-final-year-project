@@ -154,11 +154,13 @@ export async function getPostByID(req: Request, res: Response) {
         media: true,
         likes: true,
         author: true,
+        postHashtags: { with: { hashtag: true } },
         comments: {
           with: {
             media: true,
             likes: true,
             author: true,
+            postHashtags: { with: { hashtag: true } },
           },
         },
         parentPost: {
@@ -207,8 +209,9 @@ export async function getPostFromUser(req: Request, res: Response) {
         likes: true,
         media: true,
         author: true,
+        postHashtags: { with: { hashtag: true } },
         comments: {
-          with: { media: true, likes: true, author: true },
+          with: { media: true, likes: true, author: true, postHashtags: { with: { hashtag: true } } },
         },
       },
     });

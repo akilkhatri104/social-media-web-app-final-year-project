@@ -16,6 +16,7 @@ export type PostDto = {
     updatedAt: string;
     author: any | null;
     media: any[];
+    hashtags: string[];
     parentPost: any | null;
     quotedPost: PostDto | null;
     likeCount: number;

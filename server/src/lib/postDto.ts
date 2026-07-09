@@ -14,6 +14,7 @@ type PostRecord = {
   comments?: any[];
   reposts?: any[];
   quotePosts?: any[];
+  postHashtags?: { hashtag?: { name: string } | null }[];
   parentPost?: any | null;
   quotedPost?: PostRecord | null;
 };
@@ -30,6 +31,7 @@ type PostDto = {
 
   author: any | null;
   media: any[];
+  hashtags: string[];
   parentPost: {
     id: number;
     userId: string;
@@ -58,6 +60,11 @@ export function toPostDto(post: PostRecord): PostDto {
 
     author: post.author ?? null,
     media: post.media ?? [],
+    hashtags: post.postHashtags
+      ? post.postHashtags
+          .map((entry) => entry.hashtag?.name)
+          .filter((name): name is string => Boolean(name))
+      : [],
 
     parentPost: post.parentPost
       ? {
@@ -90,6 +97,11 @@ function toPostDtoShallow(post: PostRecord): PostDto {
 
     author: post.author ?? null,
     media: post.media ?? [],
+    hashtags: post.postHashtags
+      ? post.postHashtags
+          .map((entry) => entry.hashtag?.name)
+          .filter((name): name is string => Boolean(name))
+      : [],
 
     parentPost: post.parentPost
       ? {

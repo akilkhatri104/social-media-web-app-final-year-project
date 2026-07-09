@@ -12,10 +12,7 @@ export function QuotedPostEmbed({ post }: { post: PostDto | null }) {
     }
 
     return (
-        <Link
-            to={`/post/${post.id}`}
-            className="mt-2 block rounded-2xl border p-3 hover:bg-accent/40"
-        >
+        <div className="mt-2 rounded-2xl border p-3 hover:bg-accent/40">
             <div className="text-sm flex items-center">
                 <Avatar>
                     <AvatarImage src={post.author.image} />
@@ -29,6 +26,20 @@ export function QuotedPostEmbed({ post }: { post: PostDto | null }) {
 
             <p className="mt-2 text-sm whitespace-pre-wrap">{post.content}</p>
 
+            {Array.isArray(post.hashtags) && post.hashtags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                    {post.hashtags.map((tag) => (
+                        <Link
+                            key={tag}
+                            to={`/hashtag/${tag}`}
+                            className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-primary hover:bg-accent/80"
+                        >
+                            #{tag}
+                        </Link>
+                    ))}
+                </div>
+            )}
+
             {post.media?.length > 0 && (
                 <div className="mt-2 overflow-hidden rounded-xl border">
                     {post.media[0].type === "image" ? (
@@ -38,6 +49,13 @@ export function QuotedPostEmbed({ post }: { post: PostDto | null }) {
                     )}
                 </div>
             )}
-        </Link>
+
+            <Link
+                to={`/post/${post.id}`}
+                className="mt-3 inline-flex text-xs font-medium text-primary hover:underline"
+            >
+                View quoted post
+            </Link>
+        </div>
     );
 }

@@ -337,6 +337,20 @@ const PostCard = ({ post }: Props) => {
                         </p>
                     </Link>
 
+                    {Array.isArray(post?.hashtags) && post.hashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                            {post.hashtags.map((tag: string) => (
+                                <Link
+                                    key={tag}
+                                    to={`/hashtag/${tag}`}
+                                    className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-primary hover:bg-accent/80"
+                                >
+                                    #{tag}
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Media */}
                     {post?.media && Array.isArray(post.media) && post.media.length > 0 && (
                         <div className="relative w-full mt-2">

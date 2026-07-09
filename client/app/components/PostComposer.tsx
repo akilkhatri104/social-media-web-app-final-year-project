@@ -71,6 +71,8 @@ export default function PostComposer({
             setContent("");
             setFiles([]);
             queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.hashtags.trending });
+            queryClient.invalidateQueries({ queryKey: queryKeys.explore.summary });
             navigate(`/`)
             toast.success("Posted Successfully")
         },

@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query"
+import { Link } from "react-router"
 import { SearchIcon, SparklesIcon, TagIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Badge } from "~/components/ui/badge"
@@ -9,17 +11,9 @@ import {
   CardTitle,
 } from "~/components/ui/card"
 import { Input } from "~/components/ui/input"
-
-const exploreTags = [
-  { label: "Campus Life", count: "128 posts" },
-  { label: "Placements", count: "96 posts" },
-  { label: "Hackathons", count: "74 posts" },
-  { label: "Project Showcase", count: "58 posts" },
-  { label: "Study Groups", count: "43 posts" },
-  { label: "Design Inspiration", count: "37 posts" },
-  { label: "Web Development", count: "31 posts" },
-  { label: "Open Source", count: "24 posts" },
-]
+import { api } from "~/lib/axios"
+import type { APIResponse, TrendingHashtag } from "~/lib/types"
+import { queryKeys } from "~/lib/react-query"
 
 const suggestedSearches = [
   "Find trending conversations",
@@ -29,18 +23,26 @@ const suggestedSearches = [
 
 export function ExploreSidebar() {
   const [query, setQuery] = useState("")
+  const { data, isPending } = useQuery({
+    queryKey: queryKeys.hashtags.trending,
+    queryFn: async () => {
+      const res = await api.get<APIResponse>("/api/hashtags/trending")
+      return res.data.data as TrendingHashtag[]
+    },
+  })
 
   const filteredTags = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
+    const sourceTags = data ?? []
 
     if (!normalizedQuery) {
-      return exploreTags
+      return sourceTags
     }
 
-    return exploreTags.filter((tag) =>
-      tag.label.toLowerCase().includes(normalizedQuery)
+    return sourceTags.filter((tag) =>
+      tag.name.toLowerCase().includes(normalizedQuery)
     )
-  }, [query])
+  }, [data, query])
 
   return (
     <aside className="hidden w-80 shrink-0 border-r border-border/80 bg-background/95 xl:block">
@@ -75,20 +77,22 @@ export function ExploreSidebar() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
-              {filteredTags.length > 0 ? (
+              {isPending ? (
+                <p className="text-sm text-muted-foreground">Loading tags...</p>
+              ) : filteredTags.length > 0 ? (
                 filteredTags.map((tag, index) => (
-                  <button
-                    key={tag.label}
-                    type="button"
+                  <Link
+                    key={tag.name}
+                    to={`/hashtag/${tag.name}`}
                     className="group flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-left transition-colors hover:border-primary/40 hover:bg-accent"
                   >
                     <Badge variant={index === 0 ? "default" : "outline"}>
-                      #{tag.label}
+                      #{tag.name}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {tag.count}
+                      {tag.postCount} posts
                     </span>
-                  </button>
+                  </Link>
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground">

@@ -34,7 +34,7 @@ export async function createPost(req: Request, res: Response) {
 
     if (parentPostId) {
       const parentPost = await db.query.post.findFirst({
-        where: eq(parentPostId, post.id),
+        where: eq(post.id, parentPostId),
       });
 
       if (!parentPost) {
@@ -44,7 +44,7 @@ export async function createPost(req: Request, res: Response) {
 
     if (quotedPostId) {
       const quotedPost = await db.query.post.findFirst({
-        where: eq(quotedPostId, post.id),
+        where: eq(post.id, quotedPostId),
       });
 
       if (!quotedPost) {
@@ -54,55 +54,51 @@ export async function createPost(req: Request, res: Response) {
 
     const hashtags = extractHashtags(content);
 
-    const [createdPost] = await db.transaction(async (tx) => {
-      const [newPost] = await tx
-        .insert(post)
-        .values({
-          userId,
-          parentPostId,
-          quotedPostId,
-          content,
-          visibility,
-        })
-        .returning({ postId: post.id });
+    const [createdPost] = await db
+      .insert(post)
+      .values({
+        userId,
+        parentPostId,
+        quotedPostId,
+        content,
+        visibility,
+      })
+      .returning({ postId: post.id });
 
-      if (!newPost || !newPost.postId) {
-        throw new AppError('Error while creating post', 500);
-      }
+    if (!createdPost || !createdPost.postId) {
+      throw new AppError('Error while creating post', 500);
+    }
 
-      if (hashtags.length > 0) {
-        for (const name of hashtags) {
-          const insertedHashtag = await tx
-            .insert(hashtag)
-            .values({ name })
-            .onConflictDoNothing()
-            .returning({ hashtagId: hashtag.id });
+    if (hashtags.length > 0) {
+      for (const name of hashtags) {
+        const insertedHashtag = await db
+          .insert(hashtag)
+          .values({ name })
+          .onConflictDoNothing()
+          .returning({ hashtagId: hashtag.id });
 
-          const hashtagId =
-            insertedHashtag[0]?.hashtagId ??
-            (
-              await tx.query.hashtag.findFirst({
-                where: eq(hashtag.name, name),
-                columns: { id: true },
-              })
-            )?.id;
-
-          if (!hashtagId) {
-            throw new AppError('Error while creating hashtag links', 500);
-          }
-
-          await tx
-            .insert(postHashtag)
-            .values({
-              postId: newPost.postId,
-              hashtagId,
+        const hashtagId =
+          insertedHashtag[0]?.hashtagId ??
+          (
+            await db.query.hashtag.findFirst({
+              where: eq(hashtag.name, name),
+              columns: { id: true },
             })
-            .onConflictDoNothing();
-        }
-      }
+          )?.id;
 
-      return [newPost];
-    });
+        if (!hashtagId) {
+          throw new AppError('Error while creating hashtag links', 500);
+        }
+
+        await db
+          .insert(postHashtag)
+          .values({
+            postId: createdPost.postId,
+            hashtagId,
+          })
+          .onConflictDoNothing();
+      }
+    }
 
     if (!createdPost || !createdPost.postId) {
       throw new AppError('Error while creating post', 500);

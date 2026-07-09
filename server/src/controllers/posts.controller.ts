@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
-import { media, post, like } from '../lib/db/schema.ts';
+import { hashtag, media, post, postHashtag, like } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
 import { count, eq, inArray, sql, type InferSelectModel } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
@@ -9,6 +9,7 @@ import {
   generateThumbnail,
   uploadToCloudinary,
 } from '../lib/cloudinary.ts';
+import { extractHashtags } from '../lib/hashtags.ts';
 
 export async function createPost(req: Request, res: Response) {
   try {
@@ -22,6 +23,8 @@ export async function createPost(req: Request, res: Response) {
         402,
       );
     }
+
+    const userId = req.session.user.id;
 
     const { parentPostId, content, visibility, quotedPostId } = req.body;
 
@@ -49,16 +52,57 @@ export async function createPost(req: Request, res: Response) {
       }
     }
 
-    const [createdPost] = await db
-      .insert(post)
-      .values({
-        userId: req.session.user.id,
-        parentPostId,
-        quotedPostId,
-        content,
-        visibility,
-      })
-      .returning({ postId: post.id });
+    const hashtags = extractHashtags(content);
+
+    const [createdPost] = await db.transaction(async (tx) => {
+      const [newPost] = await tx
+        .insert(post)
+        .values({
+          userId,
+          parentPostId,
+          quotedPostId,
+          content,
+          visibility,
+        })
+        .returning({ postId: post.id });
+
+      if (!newPost || !newPost.postId) {
+        throw new AppError('Error while creating post', 500);
+      }
+
+      if (hashtags.length > 0) {
+        for (const name of hashtags) {
+          const insertedHashtag = await tx
+            .insert(hashtag)
+            .values({ name })
+            .onConflictDoNothing()
+            .returning({ hashtagId: hashtag.id });
+
+          const hashtagId =
+            insertedHashtag[0]?.hashtagId ??
+            (
+              await tx.query.hashtag.findFirst({
+                where: eq(hashtag.name, name),
+                columns: { id: true },
+              })
+            )?.id;
+
+          if (!hashtagId) {
+            throw new AppError('Error while creating hashtag links', 500);
+          }
+
+          await tx
+            .insert(postHashtag)
+            .values({
+              postId: newPost.postId,
+              hashtagId,
+            })
+            .onConflictDoNothing();
+        }
+      }
+
+      return [newPost];
+    });
 
     if (!createdPost || !createdPost.postId) {
       throw new AppError('Error while creating post', 500);

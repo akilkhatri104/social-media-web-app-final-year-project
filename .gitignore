@@ -1,6 +1,7 @@
 server/.env
 server/node_modules/
 server/dist
+server/drizzle
 
 client/node_modules/
 client/dist/

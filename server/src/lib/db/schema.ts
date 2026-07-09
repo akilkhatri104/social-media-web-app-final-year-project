@@ -21,6 +21,37 @@ export const post = p.pgTable('post', {
     .notNull(),
 });
 
+export const hashtag = p.pgTable('hashtag', {
+  id: p.serial('id').primaryKey(),
+  name: p.text('name').notNull().unique(),
+  createdAt: p.timestamp('created_at').defaultNow().notNull(),
+  updatedAt: p
+    .timestamp('updated_at')
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
+export const postHashtag = p.pgTable(
+  'post_hashtag',
+  {
+    id: p.serial('id').primaryKey(),
+    postId: p
+      .integer('post_id')
+      .notNull()
+      .references(() => post.id, { onDelete: 'cascade' }),
+    hashtagId: p
+      .integer('hashtag_id')
+      .notNull()
+      .references(() => hashtag.id, { onDelete: 'cascade' }),
+    createdAt: p.timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [
+    p.unique().on(t.postId, t.hashtagId),
+    p.index('post_hashtag_post_id_idx').on(t.postId),
+    p.index('post_hashtag_hashtag_id_idx').on(t.hashtagId),
+  ],
+);
+
 export const repost = p.pgTable(
   'repost',
   {
@@ -122,6 +153,7 @@ export const follow = p.pgTable(
 export const postRelations = relations(post, ({ one, many }) => ({
   media: many(media),
   likes: many(like),
+  postHashtags: many(postHashtag),
 
   comments: many(post, { relationName: 'post_comments' }),
   parentPost: one(post, {
@@ -143,6 +175,21 @@ export const postRelations = relations(post, ({ one, many }) => ({
   author: one(user, {
     fields: [post.userId],
     references: [user.id],
+  }),
+}));
+
+export const hashtagRelations = relations(hashtag, ({ many }) => ({
+  postHashtags: many(postHashtag),
+}));
+
+export const postHashtagRelations = relations(postHashtag, ({ one }) => ({
+  post: one(post, {
+    fields: [postHashtag.postId],
+    references: [post.id],
+  }),
+  hashtag: one(hashtag, {
+    fields: [postHashtag.hashtagId],
+    references: [hashtag.id],
   }),
 }));
 

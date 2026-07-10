@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card"
+import { SearchBar } from "~/components/SearchBar"
 import { api } from "~/lib/axios"
 import type { APIResponse, TrendingHashtag } from "~/lib/types"
 import { queryKeys } from "~/lib/react-query"
@@ -37,8 +38,11 @@ export function ExploreSidebar() {
             Explore
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Search topics, people, and posts from the top bar.
+            Search topics, people, and posts from here.
           </p>
+          <div className="mt-4">
+            <SearchBar placeholder="Search people, posts, hashtags" />
+          </div>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5">

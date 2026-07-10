@@ -53,6 +53,7 @@ import PostComposer from "./PostComposer";
 import FollowButton from "./FollowButton";
 import { cn } from "~/lib/utils";
 import { QuotedPostEmbed } from "./QuotedPostEmbed";
+import { LinkifiedText } from "./LinkifiedText";
 
 type Props = {
     post: any;
@@ -331,25 +332,9 @@ const PostCard = ({ post }: Props) => {
                     )}
 
                     {/* Post Content */}
-                    <Link to={`/post/${post?.id}`}>
-                        <p className="text-sm whitespace-pre-wrap">
-                            {post?.content}
-                        </p>
-                    </Link>
-
-                    {Array.isArray(post?.hashtags) && post.hashtags.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                            {post.hashtags.map((tag: string) => (
-                                <Link
-                                    key={tag}
-                                    to={`/hashtag/${tag}`}
-                                    className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-primary hover:bg-accent/80"
-                                >
-                                    #{tag}
-                                </Link>
-                            ))}
-                        </div>
-                    )}
+                    <p className="text-sm">
+                        <LinkifiedText content={post?.content ?? ""} />
+                    </p>
 
                     {/* Media */}
                     {post?.media && Array.isArray(post.media) && post.media.length > 0 && (

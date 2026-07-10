@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import type { PostDto } from "~/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { LinkifiedText } from "./LinkifiedText";
 
 export function QuotedPostEmbed({ post }: { post: PostDto | null }) {
     if (!post) {
@@ -24,21 +25,9 @@ export function QuotedPostEmbed({ post }: { post: PostDto | null }) {
                 </span>
             </div>
 
-            <p className="mt-2 text-sm whitespace-pre-wrap">{post.content}</p>
-
-            {Array.isArray(post.hashtags) && post.hashtags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                    {post.hashtags.map((tag) => (
-                        <Link
-                            key={tag}
-                            to={`/hashtag/${tag}`}
-                            className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-primary hover:bg-accent/80"
-                        >
-                            #{tag}
-                        </Link>
-                    ))}
-                </div>
-            )}
+            <p className="mt-2 text-sm">
+                <LinkifiedText content={post.content} />
+            </p>
 
             {post.media?.length > 0 && (
                 <div className="mt-2 overflow-hidden rounded-xl border">

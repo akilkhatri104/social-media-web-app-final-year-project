@@ -46,3 +46,24 @@ export type ExploreResponse = {
     trendingHashtags: TrendingHashtag[];
     popularPosts: PostDto[];
 };
+
+export type SearchUserResult = {
+    id: string;
+    name: string;
+    username: string | null;
+    displayUsername: string | null;
+    image: string | null;
+    bio: string | null;
+};
+
+export type SearchHashtagResult = {
+    name: string;
+    postCount: number;
+};
+
+export type SearchResponse = {
+    query: string;
+    users: SearchUserResult[];
+    hashtags: SearchHashtagResult[];
+    posts: PostDto[];
+};

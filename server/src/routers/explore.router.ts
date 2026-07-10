@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { getExplore } from '../controllers/discovery.controller.js';
+import { getExplore, searchDiscoverableContent } from '../controllers/discovery.controller.js';
 
 const router = Router();
 
 router.get('/', getExplore);
+router.get('/search', searchDiscoverableContent);
 
 export default router;

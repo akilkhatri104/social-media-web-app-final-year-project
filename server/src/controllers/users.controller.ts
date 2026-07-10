@@ -5,7 +5,7 @@ import { APIResponse } from '../lib/apiResponse.ts';
 import { deleteFromCloudinary, uploadToCloudinary } from '../lib/cloudinary.ts';
 import { db } from '../lib/db/client.ts';
 import { user } from '../lib/auth-schema.ts';
-import { eq, or } from 'drizzle-orm';
+import { eq, ilike, or } from 'drizzle-orm';
 import { APIError } from 'better-auth';
 
 export async function me(req: Request, res: Response) {
@@ -422,7 +422,8 @@ export async function verifyForgetPasswordOTP(req: Request, res: Response) {
 
 export async function getUserByUsername(req: Request, res: Response) {
   try {
-    const { username } = req.params;
+    const rawUsername = req.params.username;
+    const username = typeof rawUsername === 'string' ? rawUsername.replace(/^@/, '').trim() : '';
 
     if (!username) {
       throw new AppError('Username is required', 400);
@@ -432,6 +433,9 @@ export async function getUserByUsername(req: Request, res: Response) {
       where: or(
         eq(user.username, username),
         eq(user.displayUsername, username),
+        ilike(user.username, username),
+        ilike(user.displayUsername, username),
+        ilike(user.name, username),
       ),
     });
 

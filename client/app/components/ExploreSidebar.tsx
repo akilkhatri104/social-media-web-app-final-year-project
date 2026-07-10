@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "react-router"
-import { SearchIcon, SparklesIcon, TagIcon } from "lucide-react"
-import { useMemo, useState } from "react"
+import { SparklesIcon, TagIcon } from "lucide-react"
 import { Badge } from "~/components/ui/badge"
 import {
   Card,
@@ -10,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card"
-import { Input } from "~/components/ui/input"
 import { api } from "~/lib/axios"
 import type { APIResponse, TrendingHashtag } from "~/lib/types"
 import { queryKeys } from "~/lib/react-query"
@@ -22,7 +20,6 @@ const suggestedSearches = [
 ]
 
 export function ExploreSidebar() {
-  const [query, setQuery] = useState("")
   const { data, isPending } = useQuery({
     queryKey: queryKeys.hashtags.trending,
     queryFn: async () => {
@@ -30,19 +27,6 @@ export function ExploreSidebar() {
       return res.data.data as TrendingHashtag[]
     },
   })
-
-  const filteredTags = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-    const sourceTags = data ?? []
-
-    if (!normalizedQuery) {
-      return sourceTags
-    }
-
-    return sourceTags.filter((tag) =>
-      tag.name.toLowerCase().includes(normalizedQuery)
-    )
-  }, [data, query])
 
   return (
     <aside className="hidden w-80 shrink-0 border-r border-border/80 bg-background/95 xl:block">
@@ -53,34 +37,23 @@ export function ExploreSidebar() {
             Explore
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Search topics and jump into the conversations you care about.
+            Search topics, people, and posts from the top bar.
           </p>
-          <div className="relative mt-4">
-            <SearchIcon className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              aria-label="Search explore tags"
-              className="pl-9"
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search tags"
-              value={query}
-            />
-          </div>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5">
           <Card size="sm" className="gap-4">
             <CardHeader className="pb-0">
-              <CardTitle>Tags</CardTitle>
+              <CardTitle>Trending hashtags</CardTitle>
               <CardDescription>
-                {filteredTags.length} tag{filteredTags.length === 1 ? "" : "s"}{" "}
-                available
+                {data?.length ?? 0} tag{(data?.length ?? 0) === 1 ? "" : "s"} available
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               {isPending ? (
                 <p className="text-sm text-muted-foreground">Loading tags...</p>
-              ) : filteredTags.length > 0 ? (
-                filteredTags.map((tag, index) => (
+              ) : data && data.length > 0 ? (
+                data.map((tag, index) => (
                   <Link
                     key={tag.name}
                     to={`/hashtag/${tag.name}`}
@@ -96,7 +69,7 @@ export function ExploreSidebar() {
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No tags match that search yet.
+                  No trending hashtags yet.
                 </p>
               )}
             </CardContent>

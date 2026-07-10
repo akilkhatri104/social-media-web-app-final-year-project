@@ -21,6 +21,7 @@ export const queryKeys = {
     },
     explore: {
         summary: ["explore", "summary"] as const,
+        search: (query?: string) => ["explore", "search", query] as const,
     },
     hashtags: {
         trending: ["hashtags", "trending"] as const,

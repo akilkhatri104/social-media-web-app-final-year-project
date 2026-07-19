@@ -35,3 +35,33 @@ export type FeedItem =
           repostedBy: any;
           originalPost: PostDto;
       };
+
+export type UserDto = {
+    id: string;
+    name: string;
+    username: string | null;
+    image: string | null;
+};
+
+export type MessageDto = {
+    id: number;
+    senderId: string;
+    receiverId: string;
+    content: string;
+    createdAt: string;
+    updatedAt: string;
+    sender?: UserDto;
+    receiver?: UserDto;
+};
+
+export type ConversationDto = {
+    user: UserDto;
+    lastMessage: {
+        id: number;
+        content: string;
+        senderId: string;
+        receiverId: string;
+        createdAt: string;
+    };
+};
+

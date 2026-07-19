@@ -24,5 +24,6 @@ export default [
         route("/profile", "./routes/profile.tsx"),
         route("/settings/profile", "./routes/editProfile.tsx"),
         route("/:username", "./routes/userProfile.tsx"),
+        route("/messages", "./routes/messages.tsx"),
     ]),
 ] satisfies RouteConfig;

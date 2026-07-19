@@ -35,7 +35,7 @@ export default function AppLayout() {
                             <VerifyEmailPrompt />
                             <Outlet />
                         </div>
-                        <ExploreSidebar />
+                        {!location.pathname.startsWith("/messages") && <ExploreSidebar />}
                     </div>
                 </main>
 

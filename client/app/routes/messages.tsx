@@ -12,10 +12,169 @@ import {
   MessageSquareIcon, 
   UserPlusIcon, 
   ArrowLeftIcon,
-  Loader2Icon
+  Loader2Icon,
+  CornerUpLeftIcon,
+  XIcon
 } from "lucide-react";
 import { toast } from "sonner";
 
+// INDIVIDUAL MESSAGE ITEM COMPONENT WITH GESTURE SWIPING & HOVER REPLY
+interface MessageBubbleItemProps {
+  msg: MessageDto;
+  isMe: boolean;
+  meId?: string;
+  onReply: (msg: MessageDto) => void;
+  getInitials: (name: string) => string;
+  formatTime: (isoString: string) => string;
+  onScrollToMessage: (id: number) => void;
+  isHighlighted: boolean;
+}
+
+function MessageBubbleItem({
+  msg,
+  isMe,
+  meId,
+  onReply,
+  getInitials,
+  formatTime,
+  onScrollToMessage,
+  isHighlighted,
+}: MessageBubbleItemProps) {
+  const [startX, setStartX] = useState(0);
+  const [offsetX, setOffsetX] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const bubbleRef = useRef<HTMLDivElement>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setStartX(e.touches[0].clientX);
+    setIsSwiping(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isSwiping) return;
+    const currentX = e.touches[0].clientX;
+    const diffX = currentX - startX;
+
+    // Swipe right to reply (friction & cap at 70px)
+    if (diffX > 0) {
+      const drag = Math.min(diffX * 0.4, 70);
+      setOffsetX(drag);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsSwiping(false);
+    if (offsetX >= 40) {
+      onReply(msg);
+    }
+    setOffsetX(0);
+  };
+
+  const parentSenderName = msg.parentMessage
+    ? msg.parentMessage.senderId === meId
+      ? "You"
+      : msg.parentMessage.sender?.name || "User"
+    : "";
+
+  return (
+    <div
+      id={`message-${msg.id}`}
+      className={`group relative flex w-full items-center my-1 select-none transition-all duration-300 ${
+        isMe ? "justify-end" : "justify-start"
+      }`}
+    >
+      {/* Slide-to-reply background indicator */}
+      {offsetX > 0 && (
+        <div
+          className="absolute left-2 flex items-center gap-2 text-primary transition-opacity"
+          style={{ opacity: Math.min(offsetX / 40, 1) }}
+        >
+          <CornerUpLeftIcon className="h-4 w-4 animate-pulse" />
+          <span className="text-[10px] font-semibold">Reply</span>
+        </div>
+      )}
+
+      {/* Main Drag/Slide wrapper */}
+      <div
+        ref={bubbleRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className="flex items-center gap-2 transition-transform duration-200"
+        style={{
+          transform: `translateX(${offsetX}px)`,
+          maxWidth: "75%",
+        }}
+      >
+        {/* Desktop Quick-Reply button (Reveals on hover) */}
+        {!isMe && (
+          <div className="order-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 duration-200">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onReply(msg)}
+              className="h-8 w-8 rounded-full hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+            >
+              <CornerUpLeftIcon className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        <div
+          className={`flex flex-col relative px-4 py-2.5 rounded-2xl shadow-sm leading-relaxed text-sm ${
+            isMe
+              ? "bg-primary text-primary-foreground rounded-br-none order-1"
+              : "bg-card text-foreground border border-border rounded-bl-none order-1"
+          } ${
+            isHighlighted 
+              ? "ring-4 ring-primary/40 scale-[1.02] transition-all duration-300 shadow-lg" 
+              : ""
+          }`}
+        >
+          {/* Quoted parent message block */}
+          {msg.parentMessage && (
+            <button
+              onClick={() => onScrollToMessage(msg.parentMessageId!)}
+              className={`block w-full text-left p-2 mb-2 rounded-lg border-l-4 text-xs select-none transition-colors ${
+                isMe
+                  ? "bg-black/10 text-primary-foreground/90 border-primary-foreground/50 hover:bg-black/20"
+                  : "bg-muted text-muted-foreground border-primary hover:bg-muted/70"
+              }`}
+            >
+              <p className="font-bold mb-0.5">{parentSenderName}</p>
+              <p className="truncate line-clamp-1">{msg.parentMessage.content}</p>
+            </button>
+          )}
+
+          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+          <span
+            className={`block text-[9px] text-right mt-1 font-medium ${
+              isMe ? "text-primary-foreground/70" : "text-muted-foreground"
+            }`}
+          >
+            {formatTime(msg.createdAt)}
+          </span>
+        </div>
+
+        {/* Desktop Quick-Reply button for self messages */}
+        {isMe && (
+          <div className="order-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 duration-200">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onReply(msg)}
+              className="h-8 w-8 rounded-full hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+            >
+              <CornerUpLeftIcon className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// MAIN MESSAGES VIEW
 export default function MessagesRoute() {
   const { data: me } = useMe();
   const queryClient = useQueryClient();
@@ -23,6 +182,9 @@ export default function MessagesRoute() {
   const [selectedUser, setSelectedUser] = useState<UserDto | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageInput, setMessageInput] = useState("");
+  const [replyingTo, setReplyingTo] = useState<MessageDto | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<number | null>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -58,20 +220,21 @@ export default function MessagesRoute() {
     refetchInterval: 3000,
   });
 
-  // Fetch Active Chat Partner User Details
   const activePartner = selectedUser;
 
   // Send Message Mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, parentMessageId }: { content: string; parentMessageId?: number | null }) => {
       const res = await api.post<APIResponse>("/api/messages", {
         receiverId: selectedUserId,
         content,
+        parentMessageId,
       });
       return res.data.data;
     },
     onSuccess: (newMessage) => {
       setMessageInput("");
+      setReplyingTo(null);
       // Optimistic update of chat history
       queryClient.setQueryData<MessageDto[]>(["chat-history", selectedUserId], (old) => {
         if (!old) return [newMessage];
@@ -89,7 +252,10 @@ export default function MessagesRoute() {
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageInput.trim() || sendMessageMutation.isPending || !selectedUserId) return;
-    sendMessageMutation.mutate(messageInput.trim());
+    sendMessageMutation.mutate({
+      content: messageInput.trim(),
+      parentMessageId: replyingTo?.id || null,
+    });
   };
 
   const scrollToBottom = () => {
@@ -98,7 +264,7 @@ export default function MessagesRoute() {
 
   // Scroll to bottom when chat opens or new messages arrive
   useEffect(() => {
-    if (chatHistory.length > 0) {
+    if (chatHistory.length > 0 && !replyingTo) {
       scrollToBottom();
     }
   }, [chatHistory.length, selectedUserId]);
@@ -109,7 +275,8 @@ export default function MessagesRoute() {
     setSearchQuery(""); // Clear search to show recent conversations
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string = "") => {
+    if (!name) return "U";
     return name
       .split(" ")
       .map((n) => n[0])
@@ -135,6 +302,21 @@ export default function MessagesRoute() {
       return "Yesterday";
     } else {
       return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+    }
+  };
+
+  // Click quoted bubble -> scroll to parent message + visual highlight animation
+  const handleScrollToMessage = (parentMessageId: number) => {
+    const targetElement = document.getElementById(`message-${parentMessageId}`);
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedMessageId(parentMessageId);
+      // Remove flash highlight after 1.5 seconds
+      setTimeout(() => {
+        setHighlightedMessageId(null);
+      }, 1500);
+    } else {
+      toast.info("Original message not loaded in thread");
     }
   };
 
@@ -267,6 +449,7 @@ export default function MessagesRoute() {
                 onClick={() => {
                   setSelectedUserId(null);
                   setSelectedUser(null);
+                  setReplyingTo(null);
                 }}
                 className="md:hidden"
               >
@@ -300,32 +483,25 @@ export default function MessagesRoute() {
                     formatDateLabel(chatHistory[index - 1].createdAt) !== formatDateLabel(msg.createdAt);
 
                   return (
-                    <div key={msg.id} className="space-y-3">
+                    <div key={msg.id} className="space-y-2">
                       {showDateLabel && (
-                        <div className="flex justify-center my-2">
-                          <span className="text-[10px] font-semibold bg-muted px-2 py-1 rounded-md text-muted-foreground">
+                        <div className="flex justify-center my-3">
+                          <span className="text-[10px] font-semibold bg-muted px-2.5 py-1 rounded-md text-muted-foreground">
                             {formatDateLabel(msg.createdAt)}
                           </span>
                         </div>
                       )}
-                      <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                        <div
-                          className={`max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm leading-relaxed text-sm ${
-                            isMe
-                              ? "bg-primary text-primary-foreground rounded-br-none"
-                              : "bg-card text-foreground border border-border rounded-bl-none"
-                          }`}
-                        >
-                          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                          <span
-                            className={`block text-[9px] text-right mt-1 font-medium ${
-                              isMe ? "text-primary-foreground/70" : "text-muted-foreground"
-                            }`}
-                          >
-                            {formatTime(msg.createdAt)}
-                          </span>
-                        </div>
-                      </div>
+                      
+                      <MessageBubbleItem
+                        msg={msg}
+                        isMe={isMe}
+                        meId={me?.id}
+                        onReply={setReplyingTo}
+                        getInitials={getInitials}
+                        formatTime={formatTime}
+                        onScrollToMessage={handleScrollToMessage}
+                        isHighlighted={highlightedMessageId === msg.id}
+                      />
                     </div>
                   );
                 })
@@ -341,6 +517,30 @@ export default function MessagesRoute() {
               )}
               <div ref={messagesEndRef} />
             </div>
+
+            {/* Replying Preview Bar */}
+            {replyingTo && (
+              <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-muted/40 animate-slide-up">
+                <div className="flex items-center gap-3 border-l-4 border-primary pl-3 py-1">
+                  <div className="flex flex-col text-left">
+                    <span className="text-xs font-bold text-primary">
+                      Replying to {replyingTo.senderId === me?.id ? "yourself" : replyingTo.sender?.name || "User"}
+                    </span>
+                    <span className="text-xs text-muted-foreground truncate max-w-lg line-clamp-1">
+                      {replyingTo.content}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setReplyingTo(null)}
+                  className="h-7 w-7 rounded-full hover:bg-muted"
+                >
+                  <XIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
 
             {/* Message Input Box */}
             <form

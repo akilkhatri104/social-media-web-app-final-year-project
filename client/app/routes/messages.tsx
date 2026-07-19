@@ -20,6 +20,7 @@ export default function MessagesRoute() {
   const { data: me } = useMe();
   const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserDto | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -58,8 +59,7 @@ export default function MessagesRoute() {
   });
 
   // Fetch Active Chat Partner User Details
-  const activePartner = conversations.find((c) => c.user.id === selectedUserId)?.user || 
-                        searchResults.find((u) => u.id === selectedUserId);
+  const activePartner = selectedUser;
 
   // Send Message Mutation
   const sendMessageMutation = useMutation({
@@ -104,6 +104,7 @@ export default function MessagesRoute() {
   }, [chatHistory.length, selectedUserId]);
 
   const selectUserFromSearch = (user: UserDto) => {
+    setSelectedUser(user);
     setSelectedUserId(user.id);
     setSearchQuery(""); // Clear search to show recent conversations
   };
@@ -208,7 +209,10 @@ export default function MessagesRoute() {
                   return (
                     <button
                       key={chat.user.id}
-                      onClick={() => setSelectedUserId(chat.user.id)}
+                      onClick={() => {
+                        setSelectedUserId(chat.user.id);
+                        setSelectedUser(chat.user);
+                      }}
                       className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
                         isActive
                           ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[0.99]"
@@ -260,7 +264,10 @@ export default function MessagesRoute() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setSelectedUserId(null)}
+                onClick={() => {
+                  setSelectedUserId(null);
+                  setSelectedUser(null);
+                }}
                 className="md:hidden"
               >
                 <ArrowLeftIcon className="h-5 w-5" />

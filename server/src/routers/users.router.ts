@@ -10,6 +10,7 @@ import {
   sendForgetPasswordOTP,
   verifyForgetPasswordOTP,
   getUserByUsername,
+  searchUsers,
 } from '../controllers/users.controller.js';
 import { verifyAuth } from '../middlewares/verifyAuth.ts';
 import { noCache } from '../middlewares/noCache.ts';
@@ -27,6 +28,7 @@ publicRouter.post('/signup', upload.single('image'), signup);
 publicRouter.post('/forget-password/send', sendForgetPasswordOTP);
 publicRouter.post('/forget-password/verify', verifyForgetPasswordOTP);
 
+protectedRouter.get('/search', searchUsers);
 protectedRouter.get('/me', me);
 protectedRouter.post('/logout', logout);
 protectedRouter.put('/', upload.single('image'), updateUser);

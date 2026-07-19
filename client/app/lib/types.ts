@@ -49,10 +49,12 @@ export type MessageDto = {
     senderId: string;
     receiverId: string;
     content: string;
+    parentMessageId?: number | null;
     createdAt: string;
     updatedAt: string;
     sender?: UserDto;
     receiver?: UserDto;
+    parentMessage?: MessageDto | null;
 };
 
 export type ConversationDto = {

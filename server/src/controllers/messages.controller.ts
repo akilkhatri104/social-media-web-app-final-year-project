@@ -12,7 +12,7 @@ export async function sendMessage(req: Request, res: Response) {
       throw new AppError('User not logged in', 401);
     }
     const senderId = req.session.user.id;
-    const { receiverId, content }: { receiverId: string; content: string } = req.body;
+    const { receiverId, content, parentMessageId }: { receiverId: string; content: string; parentMessageId?: number | null } = req.body;
 
     if (!receiverId) {
       throw new AppError('Receiver ID is required', 400);
@@ -39,6 +39,7 @@ export async function sendMessage(req: Request, res: Response) {
         senderId,
         receiverId,
         content: content.trim(),
+        parentMessageId: parentMessageId || null,
       })
       .returning();
 
@@ -53,6 +54,11 @@ export async function sendMessage(req: Request, res: Response) {
       with: {
         sender: true,
         receiver: true,
+        parentMessage: {
+          with: {
+            sender: true,
+          }
+        }
       },
     });
 
@@ -141,6 +147,11 @@ export async function getChatHistory(req: Request, res: Response) {
       with: {
         sender: true,
         receiver: true,
+        parentMessage: {
+          with: {
+            sender: true,
+          }
+        }
       },
     });
 

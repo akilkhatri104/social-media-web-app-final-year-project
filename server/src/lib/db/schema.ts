@@ -246,6 +246,7 @@ export const message = p.pgTable('message', {
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   content: p.text('content').notNull(),
+  parentMessageId: p.integer('parent_message_id'),
   createdAt: p.timestamp('created_at').defaultNow().notNull(),
   updatedAt: p
     .timestamp('updated_at')
@@ -261,6 +262,10 @@ export const messageRelations = relations(message, ({ one }) => ({
   receiver: one(user, {
     fields: [message.receiverId],
     references: [user.id],
+  }),
+  parentMessage: one(message, {
+    fields: [message.parentMessageId],
+    references: [message.id],
   }),
 }));
 

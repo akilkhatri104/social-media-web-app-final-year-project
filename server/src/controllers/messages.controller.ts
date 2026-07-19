@@ -33,7 +33,7 @@ export async function sendMessage(req: Request, res: Response) {
     }
 
     // Insert message
-    const [newMessage] = await db
+    const inserted = await db
       .insert(message)
       .values({
         senderId,
@@ -41,6 +41,11 @@ export async function sendMessage(req: Request, res: Response) {
         content: content.trim(),
       })
       .returning();
+
+    const newMessage = inserted[0];
+    if (!newMessage) {
+      throw new AppError('Failed to insert message', 500);
+    }
 
     // Fetch the newly created message with sender and receiver relations loaded
     const fullMessage = await db.query.message.findFirst({

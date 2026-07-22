@@ -95,7 +95,14 @@ export default function UserProfile() {
               </Button>
             </Link>
           ) : (
-            <FollowButton userId={userData?.id} className="mt-2" />
+            <div className="mt-2 flex flex-wrap gap-2">
+              <FollowButton userId={userData?.id} />
+              <Link to={`/messages?to=${encodeURIComponent(userData.displayUsername || userData.username || "")}`}>
+                <Button variant="outline">
+                  Message
+                </Button>
+              </Link>
+            </div>
           )}
 
           <div className="flex gap-8 mt-3">

@@ -68,8 +68,6 @@ export type ConversationDto = {
     };
 };
 
-      };
-
 export type TrendingHashtag = {
     name: string;
     postCount: number;

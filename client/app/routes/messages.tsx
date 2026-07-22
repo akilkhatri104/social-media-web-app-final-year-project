@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router";
 import { api } from "~/lib/axios";
 import { useMe } from "~/hooks/useMe";
 import type { APIResponse, UserDto, MessageDto, ConversationDto } from "~/lib/types";
@@ -178,6 +179,7 @@ function MessageBubbleItem({
 export default function MessagesRoute() {
   const { data: me } = useMe();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserDto | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -187,6 +189,8 @@ export default function MessagesRoute() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const hydratedInitialUserRef = useRef<string | null>(null);
+  const initialUsername = searchParams.get("to")?.replace(/^@/, "").trim() || "";
 
   // Fetch Conversations List
   const { data: conversations = [], isLoading: isConversationsLoading } = useQuery<ConversationDto[]>({
@@ -209,6 +213,22 @@ export default function MessagesRoute() {
     enabled: searchQuery.trim().length > 0,
   });
 
+  const { data: initialUser } = useQuery<UserDto | null>({
+    queryKey: ["message-initial-user", initialUsername],
+    queryFn: async () => {
+      const res = await api.get<APIResponse>(`/api/users/${encodeURIComponent(initialUsername)}`);
+      const user = res.data.data?.user;
+      if (!user) return null;
+      return {
+        id: user.id,
+        name: user.name,
+        username: user.displayUsername || user.username,
+        image: user.image,
+      };
+    },
+    enabled: !!initialUsername,
+  });
+
   // Fetch Chat History
   const { data: chatHistory = [], isLoading: isChatLoading } = useQuery<MessageDto[]>({
     queryKey: ["chat-history", selectedUserId],
@@ -221,6 +241,14 @@ export default function MessagesRoute() {
   });
 
   const activePartner = selectedUser;
+
+  useEffect(() => {
+    if (!initialUsername || !initialUser || hydratedInitialUserRef.current === initialUsername) return;
+
+    setSelectedUser(initialUser);
+    setSelectedUserId(initialUser.id);
+    hydratedInitialUserRef.current = initialUsername;
+  }, [initialUser, initialUsername]);
 
   // Send Message Mutation
   const sendMessageMutation = useMutation({

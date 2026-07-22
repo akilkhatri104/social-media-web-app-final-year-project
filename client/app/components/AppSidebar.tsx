@@ -26,19 +26,6 @@ import PostComposer from "./PostComposer"
 import { Button } from "~/components/ui/button"
 import LogoutButton from "./LogoutButton"
 
-const sidebarItems = [
-    {
-        icon: <HomeIcon />,
-        name: "Home",
-        to: "/home"
-    },
-    {
-        icon: <MessageSquare />,
-        name: "Messages",
-        to: "/messages"
-    }
-]
-
 export function AppSidebar() {
     const location = useLocation()
     const { isInitialLoading, isAuth, data: user } = useMe()
@@ -47,6 +34,11 @@ export function AppSidebar() {
             icon: <HomeIcon />,
             name: "Home",
             to: "/home"
+        },
+        {
+            icon: <MessageSquare />,
+            name: "Messages",
+            to: "/messages"
         },
         {
             icon: <BookmarkIcon />,

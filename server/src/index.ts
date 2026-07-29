@@ -12,6 +12,7 @@ import feedRouter from './routers/feed.router.js';
 import exploreRouter from './routers/explore.router.js';
 import hashtagsRouter from './routers/hashtags.router.js';
 import likesRouter from './routers/likes.router.js';
+import settingsRouter from './routers/settings.router.ts';
 import messagesRouter from './routers/messages.router.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { noCache } from './middlewares/noCache.ts';
@@ -51,6 +52,7 @@ app.use('/api/hashtags', hashtagsRouter);
 app.use('/api/repost', repostRouter);
 app.use('/api/bookmarks', bookmarksRouter);
 app.use('/api/messages', messagesRouter);
+app.use('/api/settings', settingsRouter);
 
 app.use(errorHandler);
 

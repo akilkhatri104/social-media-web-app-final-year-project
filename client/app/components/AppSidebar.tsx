@@ -17,7 +17,7 @@ import {
     DialogFooter
 } from "~/components/ui/dialog"
 import { Logo } from "./Logo"
-import { BookmarkIcon, HomeIcon, SparklesIcon, User2, MessageSquare } from "lucide-react"
+import { BookmarkIcon, HomeIcon, SparklesIcon, User2, MessageSquare, Settings2, Settings2Icon } from "lucide-react"
 import { NavLink, useLocation } from "react-router"
 import React from "react"
 import { useMe } from "~/hooks/useMe"
@@ -54,6 +54,11 @@ export function AppSidebar() {
             icon: <User2 />,
             name: "Profile",
             to: `/@${!isInitialLoading && isAuth ? user?.displayUsername : ""}`
+        },
+        {
+            icon: <Settings2Icon />,
+            name: "Settings",
+            to: "/settings"
         }
     ]
     if (isInitialLoading)

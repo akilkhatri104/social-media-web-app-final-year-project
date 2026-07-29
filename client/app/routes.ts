@@ -22,8 +22,14 @@ export default [
         route("/post/:id", "./routes/post.$id.tsx"),
         route("/bookmarks", "./routes/bookmarks.tsx"),
         route("/profile", "./routes/profile.tsx"),
-        route("/settings/profile", "./routes/editProfile.tsx"),
         route("/:username", "./routes/userProfile.tsx"),
         route("/messages", "./routes/messages.tsx"),
+        layout("./routes/SettingsLayout.tsx", [
+            route("/settings", "./routes/settings.tsx"),
+            route("/settings/profile", "./routes/editProfile.tsx"),
+            route("/settings/security", "./routes/settings.security.tsx"),
+            route("/settings/notifications", "./routes/settings.notifications.tsx"),
+            route("/settings/account", "./routes/settings.account.tsx"),
+        ]),
     ]),
 ] satisfies RouteConfig;

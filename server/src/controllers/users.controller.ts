@@ -193,7 +193,6 @@ export async function updateUser(req: Request, res: Response) {
     }
     let imgUrl = undefined;
     if (req.file && req.file.mimetype.startsWith('image/')) {
-      const oldImgUrl = req.session.user.image;
       const result = await uploadToCloudinary(req.file.buffer);
       if (!result) {
         throw new AppError('Error while uploading new image');
@@ -201,27 +200,44 @@ export async function updateUser(req: Request, res: Response) {
       imgUrl = result.secure_url;
 
       if (result.public_id && req.session.user.image) {
-        const deleteRes = await deleteFromCloudinary(req.session.user.image);
+        await deleteFromCloudinary(req.session.user.image);
       }
     }
 
-    const response = await auth.api.updateUser({
-      body: {
-        username,
-        name,
-        image: imgUrl,
-        bio,
-      },
-      headers: req.headers,
-    });
+    // Better Auth's username plugin can flag the current user's own username
+    // as a conflict, so settings updates write the profile fields directly.
+    const currentUsername = (req.session.user as typeof user.$inferSelect)
+      .username;
+    const usernameChanged =
+      username && username.toLowerCase() !== currentUsername?.toLowerCase();
 
-    if (!response.status) {
-      throw new AppError('Error while updating details', 500);
+    if (usernameChanged) {
+      const existing = await db.query.user.findFirst({
+        where: eq(user.username, username.toLowerCase()),
+      });
+      if (existing && existing.id !== req.session.user.id) {
+        throw new AppError('Username is already taken', 409);
+      }
     }
 
-    const userResult = await db.query.user.findFirst({
-      where: eq(user.id, req.session.user.id),
-    });
+    const updatePayload: Partial<typeof user.$inferInsert> = {};
+    if (name !== undefined) updatePayload.name = name;
+    if (bio !== undefined) updatePayload.bio = bio;
+    if (imgUrl !== undefined) updatePayload.image = imgUrl;
+    if (usernameChanged) {
+      updatePayload.username = username.toLowerCase();
+      updatePayload.displayUsername = username;
+    }
+
+    const [userResult] = await db
+      .update(user)
+      .set(updatePayload)
+      .where(eq(user.id, req.session.user.id))
+      .returning();
+
+    if (!userResult) {
+      throw new AppError('Error while updating details', 500);
+    }
 
     return res
       .status(200)

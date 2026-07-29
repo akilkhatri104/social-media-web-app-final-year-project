@@ -39,4 +39,7 @@ export const queryKeys = {
         all: ["bookmarks"] as const,
         status: (id?: string | number) => ["bookmarks", "status", id] as const,
     },
+    settings: {
+        sessions: ["settings", "sessions"] as const,
+    },
 };

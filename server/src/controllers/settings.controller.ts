@@ -32,6 +32,8 @@ export async function deleteSession(req: Request, res: Response) {
   const userId = req.session.user.id;
   const sessionId = req.params.id;
 
+  if (!sessionId) throw new AppError('Session id is required', 400);
+
   const targetSession = await db.query.session.findFirst({
     where: and(eq(session.id, sessionId), eq(session.userId, userId)),
   });

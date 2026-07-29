@@ -18,19 +18,17 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  baseURL: backendURL,
-  trustedOrigins: [frontendURL],
-  session: {
-    cookieCache: {
-      enabled: true,
-    },
-    cookie: {
+  advanced: {
+    useSecureCookies: isSecureOrigin,
+    defaultCookieAttributes: {
       secure: isSecureOrigin,
       sameSite: isSecureOrigin ? 'none' : 'lax',
       httpOnly: true,
       maxAge: 60 * 60 * 24,
     },
   },
+  baseURL: backendURL,
+  trustedOrigins: [frontendURL],
   user: {
     additionalFields: {
       bio: {

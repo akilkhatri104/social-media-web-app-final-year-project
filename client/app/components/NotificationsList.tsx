@@ -1,12 +1,11 @@
 import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
-import { queryKeys } from "~/lib/react-query";
+import { queryClient, queryKeys } from "~/lib/react-query";
 import type { APIResponse } from "~/lib/types";
 import { Button } from "~/components/ui/button";
 
 export default function NotificationsList() {
-  const qc = useQueryClient();
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: queryKeys.notifications.all,
@@ -22,7 +21,7 @@ export default function NotificationsList() {
       const res = await api.patch<APIResponse>(`/api/notifications/read-all`);
       return res.data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.notifications.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
   });
 
   const markOne = useMutation({
@@ -30,7 +29,7 @@ export default function NotificationsList() {
       const res = await api.patch<APIResponse>(`/api/notifications/read/${id}`);
       return res.data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.notifications.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
   });
 
   if (isLoading) return <div>Loading...</div>;
@@ -66,7 +65,7 @@ export default function NotificationsList() {
                 {!n.readAt && (
                   <Button size="sm" onClick={() => markOne.mutate(n.id)} disabled={markOne.isPending}>Mark read</Button>
                 )}
-                <Button variant="ghost" size="sm" onClick={async () => { await api.delete(`/api/notifications/${n.id}`); qc.invalidateQueries({ queryKey: queryKeys.notifications.all }); }}>Delete</Button>
+                <Button variant="ghost" size="sm" onClick={async () => { await api.delete(`/api/notifications/${n.id}`); queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }); }}>Delete</Button>
               </div>
             </div>
           </div>

@@ -72,12 +72,15 @@ export async function createPost(req: Request, res: Response) {
 
     // notify parent post owner (comment/reply)
     try {
+      console.log('[NOTIFY][COMMENT]', 'actor:', userId, 'parentPostId:', parentPostId);
+
       if (parentPostId) {
         const parent = await db.query.post.findFirst({
           where: eq(post.id, parentPostId),
           columns: { userId: true },
         });
-        if (parent) {
+if (parent) {
+          console.log('[NOTIFY][COMMENT] parent userId:', parent.userId);
           await createNotificationOnce({
             recipientId: parent.userId,
             actorId: userId,
@@ -88,17 +91,21 @@ export async function createPost(req: Request, res: Response) {
       }
     } catch (e) {
       console.error('posts.controller: parent notification failed', e);
+      console.log('[NOTIFY][COMMENT][ERROR]', e);
     }
 
     // notify quoted post owner (quote)
     try {
+      console.log('[NOTIFY][QUOTE]', 'actor:', userId, 'quotedPostId:', quotedPostId);
+
       if (quotedPostId) {
         const quoted = await db.query.post.findFirst({
           where: eq(post.id, quotedPostId),
           columns: { userId: true },
         });
-        if (quoted) {
-          await createNotificationOnce({
+if (quoted) {
+            console.log('[NOTIFY][QUOTE] quoted userId:', quoted.userId);
+            await createNotificationOnce({
             recipientId: quoted.userId,
             actorId: userId,
             type: 'quote',
@@ -108,6 +115,7 @@ export async function createPost(req: Request, res: Response) {
       }
     } catch (e) {
       console.error('posts.controller: quote notification failed', e);
+      console.log('[NOTIFY][QUOTE][ERROR]', e);
     }
 
     if (hashtags.length > 0) {

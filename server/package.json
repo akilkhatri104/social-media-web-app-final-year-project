@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/src/index.js",
-    "dev": "node --watch --import tsx/esm src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "lint": "eslint 'src/**/*.ts'",
     "db:push": "npx drizzle-kit push",
     "db:generate": "npx drizzle-kit generate",

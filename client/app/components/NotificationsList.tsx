@@ -40,7 +40,7 @@ export default function NotificationsList() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-bold">Notifications</h1>
         <div className="flex gap-2">
-          <Button onClick={() => markAll.mutate()} disabled={markAll.isLoading}>Mark all read</Button>
+          <Button onClick={() => markAll.mutate()} disabled={markAll.isPending}>Mark all read</Button>
         </div>
       </div>
       <div className="space-y-2">
@@ -64,7 +64,7 @@ export default function NotificationsList() {
               </div>
               <div className="flex flex-col items-end gap-2">
                 {!n.readAt && (
-                  <Button size="sm" onClick={() => markOne.mutate(n.id)}>Mark read</Button>
+                  <Button size="sm" onClick={() => markOne.mutate(n.id)} disabled={markOne.isPending}>Mark read</Button>
                 )}
                 <Button variant="ghost" size="sm" onClick={async () => { await api.delete(`/api/notifications/${n.id}`); qc.invalidateQueries({ queryKey: queryKeys.notifications.all }); }}>Delete</Button>
               </div>

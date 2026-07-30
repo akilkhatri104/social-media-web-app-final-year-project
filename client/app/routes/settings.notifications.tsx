@@ -47,12 +47,23 @@ const initialSettings: NotificationSetting[] = [
 export default function NotificationsSettings() {
   useDocumentTitle("Notifications · Settings");
 
-  const [settings, setSettings] = useState<NotificationSetting[]>(initialSettings);
+  const [settings, setSettings] = useState<NotificationSetting[]>(() => {
+  // Pull from localStorage if available
+  const fromLS = localStorage.getItem('notification_settings');
+  if (fromLS) {
+    try {
+      return JSON.parse(fromLS);
+    } catch {}
+  }
+  return initialSettings;
+});
 
   const toggle = (id: string) => {
-    setSettings((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s))
-    );
+    setSettings(prev => {
+      const updated = prev.map(s => (s.id === id ? { ...s, enabled: !s.enabled } : s));
+      localStorage.setItem('notification_settings', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   return (

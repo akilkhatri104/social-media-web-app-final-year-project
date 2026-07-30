@@ -1,9 +1,10 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
 import { db } from '../lib/db/client.ts';
-import { like, post, notification } from '../lib/db/schema.ts';
+import { like, post } from '../lib/db/schema.ts';
 import { and, count, eq } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
+import { createNotificationOnce } from '../lib/notifications.ts';
 
 export async function toggleLike(req: Request, res: Response) {
   try {
@@ -64,8 +65,8 @@ export async function toggleLike(req: Request, res: Response) {
         columns: { userId: true },
       });
 
-      if (postOwner && postOwner.userId !== req.session.user.id) {
-        await db.insert(notification).values({
+      if (postOwner) {
+        await createNotificationOnce({
           recipientId: postOwner.userId,
           actorId: req.session.user.id,
           type: 'like',

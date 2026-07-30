@@ -282,7 +282,7 @@ export const notification = p.pgTable('notification', {
   type: p
     .text('type', { enum: ['like', 'comment', 'repost', 'follow', 'quote'] })
     .notNull(),
-  postId: p.integer('post_id'),
+  postId: p.integer('post_id').references(() => post.id, { onDelete: 'set null' }),
   readAt: p.timestamp('read_at'),
   createdAt: p.timestamp('created_at').defaultNow().notNull(),
   updatedAt: p

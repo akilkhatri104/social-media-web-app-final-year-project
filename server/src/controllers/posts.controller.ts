@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
-import { hashtag, media, post, postHashtag, like, notification } from '../lib/db/schema.ts';
+import { hashtag, media, post, postHashtag, like } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
 import { count, eq, inArray, sql, type InferSelectModel } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
@@ -10,6 +10,7 @@ import {
   uploadToCloudinary,
 } from '../lib/cloudinary.ts';
 import { extractHashtags } from '../lib/hashtags.ts';
+import { createNotificationOnce } from '../lib/notifications.ts';
 
 export async function createPost(req: Request, res: Response) {
   try {
@@ -76,8 +77,8 @@ export async function createPost(req: Request, res: Response) {
           where: eq(post.id, parentPostId),
           columns: { userId: true },
         });
-        if (parent && parent.userId !== userId) {
-          await db.insert(notification).values({
+        if (parent) {
+          await createNotificationOnce({
             recipientId: parent.userId,
             actorId: userId,
             type: 'comment',
@@ -96,8 +97,8 @@ export async function createPost(req: Request, res: Response) {
           where: eq(post.id, quotedPostId),
           columns: { userId: true },
         });
-        if (quoted && quoted.userId !== userId) {
-          await db.insert(notification).values({
+        if (quoted) {
+          await createNotificationOnce({
             recipientId: quoted.userId,
             actorId: userId,
             type: 'quote',

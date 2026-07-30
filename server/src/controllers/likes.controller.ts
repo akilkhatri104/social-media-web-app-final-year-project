@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
 import { db } from '../lib/db/client.ts';
-import { like, post } from '../lib/db/schema.ts';
+import { like, post, notification } from '../lib/db/schema.ts';
 import { and, count, eq } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
 
@@ -55,6 +55,25 @@ export async function toggleLike(req: Request, res: Response) {
 
     if (!likeInserted || likeInserted.rowCount == 0) {
       throw new AppError('Error while liking the post', 500);
+    }
+
+    // create notification for the post owner (if not liking own post)
+    try {
+      const postOwner = await db.query.post.findFirst({
+        where: eq(post.id, postId),
+        columns: { userId: true },
+      });
+
+      if (postOwner && postOwner.userId !== req.session.user.id) {
+        await db.insert(notification).values({
+          recipientId: postOwner.userId,
+          actorId: req.session.user.id,
+          type: 'like',
+          postId,
+        });
+      }
+    } catch (e) {
+      console.error('likes.controller: notification creation failed', e);
     }
 
     return res

@@ -17,7 +17,7 @@ import {
     DialogFooter
 } from "~/components/ui/dialog"
 import { Logo } from "./Logo"
-import { BookmarkIcon, HomeIcon, SparklesIcon, User2, MessageSquare, Settings2, Settings2Icon } from "lucide-react"
+import { BookmarkIcon, HomeIcon, SparklesIcon, User2, MessageSquare, Bell, Settings2, Settings2Icon } from "lucide-react"
 import { NavLink, useLocation } from "react-router"
 import React from "react"
 import { useMe } from "~/hooks/useMe"
@@ -39,6 +39,11 @@ export function AppSidebar() {
             icon: <MessageSquare />,
             name: "Messages",
             to: "/messages"
+        },
+        {
+            icon: <Bell />,
+            name: "Notifications",
+            to: "/notifications"
         },
         {
             icon: <BookmarkIcon />,

@@ -269,3 +269,40 @@ export const messageRelations = relations(message, ({ one }) => ({
   }),
 }));
 
+export const notification = p.pgTable('notification', {
+  id: p.serial('id').primaryKey(),
+  recipientId: p
+    .text('recipient_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  actorId: p
+    .text('actor_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  type: p
+    .text('type', { enum: ['like', 'comment', 'repost', 'follow', 'quote'] })
+    .notNull(),
+  postId: p.integer('post_id'),
+  readAt: p.timestamp('read_at'),
+  createdAt: p.timestamp('created_at').defaultNow().notNull(),
+  updatedAt: p
+    .timestamp('updated_at')
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
+export const notificationRelations = relations(notification, ({ one }) => ({
+  recipient: one(user, {
+    fields: [notification.recipientId],
+    references: [user.id],
+  }),
+  actor: one(user, {
+    fields: [notification.actorId],
+    references: [user.id],
+  }),
+  post: one(post, {
+    fields: [notification.postId],
+    references: [post.id],
+  }),
+}));
+

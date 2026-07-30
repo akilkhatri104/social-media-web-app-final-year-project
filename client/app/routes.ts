@@ -16,6 +16,7 @@ export default [
     layout("./routes/AppLayout.tsx", [
         route("/home", "./routes/home.tsx"),
         route("/explore", "./routes/explore.tsx"),
+        route("/notifications", "./routes/notifications.tsx"),
         route("/search", "./routes/search.tsx"),
         route("/hashtag/:tag", "./routes/hashtag.$tag.tsx"),
         route("/verify-email", "./routes/verify-email.tsx"),

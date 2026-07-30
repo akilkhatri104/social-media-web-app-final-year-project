@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { AppError } from '../middlewares/errorHandler.ts';
 import type { Request, Response } from 'express';
-import { post, repost } from '../lib/db/schema.ts';
+import { post, repost, notification } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
 import { APIResponse } from '../lib/apiResponse.ts';
 
@@ -54,6 +54,25 @@ export async function toggleRepost(req: Request, res: Response) {
 
     if (!repostCreated) {
       throw new AppError('Error while creating repost', 500);
+    }
+
+    // notify original post owner
+    try {
+      const postOwner = await db.query.post.findFirst({
+        where: eq(post.id, postId),
+        columns: { userId: true },
+      });
+
+      if (postOwner && postOwner.userId !== req.session.user.id) {
+        await db.insert(notification).values({
+          recipientId: postOwner.userId,
+          actorId: req.session.user.id,
+          type: 'repost',
+          postId,
+        });
+      }
+    } catch (e) {
+      console.error('reposts.controller: notification creation failed', e);
     }
 
     return res

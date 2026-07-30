@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
-import { hashtag, media, post, postHashtag, like } from '../lib/db/schema.ts';
+import { hashtag, media, post, postHashtag, like, notification } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
 import { count, eq, inArray, sql, type InferSelectModel } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
@@ -67,6 +67,46 @@ export async function createPost(req: Request, res: Response) {
 
     if (!createdPost || !createdPost.postId) {
       throw new AppError('Error while creating post', 500);
+    }
+
+    // notify parent post owner (comment/reply)
+    try {
+      if (parentPostId) {
+        const parent = await db.query.post.findFirst({
+          where: eq(post.id, parentPostId),
+          columns: { userId: true },
+        });
+        if (parent && parent.userId !== userId) {
+          await db.insert(notification).values({
+            recipientId: parent.userId,
+            actorId: userId,
+            type: 'comment',
+            postId: createdPost.postId,
+          });
+        }
+      }
+    } catch (e) {
+      console.error('posts.controller: parent notification failed', e);
+    }
+
+    // notify quoted post owner (quote)
+    try {
+      if (quotedPostId) {
+        const quoted = await db.query.post.findFirst({
+          where: eq(post.id, quotedPostId),
+          columns: { userId: true },
+        });
+        if (quoted && quoted.userId !== userId) {
+          await db.insert(notification).values({
+            recipientId: quoted.userId,
+            actorId: userId,
+            type: 'quote',
+            postId: createdPost.postId,
+          });
+        }
+      }
+    } catch (e) {
+      console.error('posts.controller: quote notification failed', e);
     }
 
     if (hashtags.length > 0) {

@@ -1,11 +1,18 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
 import { db } from '../lib/db/client.ts';
-import { follow, post, repost } from '../lib/db/schema.ts';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { bookmark, follow, like, post, repost } from '../lib/db/schema.ts';
+import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
 import { toPostDto } from '../lib/postDto.ts';
 import { auth } from '../lib/auth.ts';
+
+type ViewerFeedContext = {
+  followedUserIds: Set<string>;
+  interactedPostIds: Set<number>;
+  interactedAuthorIds: Set<string>;
+  interestedHashtags: Set<string>;
+};
 
 function postWithFeedRelations() {
   return {
@@ -36,6 +43,107 @@ function postWithFeedRelations() {
       },
     },
   } as const;
+}
+
+function addPostToViewerContext(
+  context: ViewerFeedContext,
+  targetPost?: {
+    id: number;
+    userId: string;
+    postHashtags?: { hashtag?: { name: string } | null }[];
+  } | null,
+) {
+  if (!targetPost) {
+    return;
+  }
+
+  context.interactedPostIds.add(targetPost.id);
+  context.interactedAuthorIds.add(targetPost.userId);
+
+  for (const entry of targetPost.postHashtags ?? []) {
+    if (entry.hashtag?.name) {
+      context.interestedHashtags.add(entry.hashtag.name);
+    }
+  }
+}
+
+async function getViewerFeedContext(userId: string): Promise<ViewerFeedContext> {
+  const context: ViewerFeedContext = {
+    followedUserIds: new Set<string>(),
+    interactedPostIds: new Set<number>(),
+    interactedAuthorIds: new Set<string>(),
+    interestedHashtags: new Set<string>(),
+  };
+
+  const [follows, likedPosts, bookmarkedPosts, repostedPosts, comments, ownPosts] =
+    await Promise.all([
+      db
+        .select({ followingId: follow.followingId })
+        .from(follow)
+        .where(eq(follow.followerId, userId)),
+      db.query.like.findMany({
+        where: eq(like.userId, userId),
+        with: {
+          post: {
+            with: { postHashtags: { with: { hashtag: true } } },
+          },
+        },
+      }),
+      db.query.bookmark.findMany({
+        where: eq(bookmark.userId, userId),
+        with: {
+          post: {
+            with: { postHashtags: { with: { hashtag: true } } },
+          },
+        },
+      }),
+      db.query.repost.findMany({
+        where: eq(repost.userId, userId),
+        with: {
+          post: {
+            with: { postHashtags: { with: { hashtag: true } } },
+          },
+        },
+      }),
+      db.query.post.findMany({
+        where: and(eq(post.userId, userId), isNotNull(post.parentPostId)),
+        with: {
+          parentPost: {
+            with: { postHashtags: { with: { hashtag: true } } },
+          },
+        },
+      }),
+      db.query.post.findMany({
+        where: eq(post.userId, userId),
+        with: { postHashtags: { with: { hashtag: true } } },
+      }),
+    ]);
+
+  for (const item of follows) {
+    context.followedUserIds.add(item.followingId);
+  }
+
+  for (const item of likedPosts) {
+    addPostToViewerContext(context, item.post);
+  }
+
+  for (const item of bookmarkedPosts) {
+    addPostToViewerContext(context, item.post);
+  }
+
+  for (const item of repostedPosts) {
+    addPostToViewerContext(context, item.post);
+  }
+
+  for (const item of comments) {
+    addPostToViewerContext(context, item.parentPost);
+  }
+
+  for (const item of ownPosts) {
+    addPostToViewerContext(context, item);
+  }
+
+  return context;
 }
 
 export async function getFollowingFeed(req: Request, res: Response) {
@@ -101,6 +209,11 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
     });
 
     req.session = session;
+
+    const viewerContext = session
+      ? await getViewerFeedContext(session.user.id)
+      : null;
+    void viewerContext;
 
     const fetchedPosts = await db.query.post.findMany({
       where: isNull(post.parentPostId),

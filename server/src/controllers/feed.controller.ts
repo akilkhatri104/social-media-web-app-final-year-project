@@ -15,6 +15,7 @@ type ViewerFeedContext = {
 };
 
 const FOR_YOU_CANDIDATE_LIMIT = 200;
+const HASHTAG_INTEREST_BOOST_CAP = 36;
 
 function postWithFeedRelations() {
   return {
@@ -86,6 +87,75 @@ function canViewPostInForYou(
     targetPost.userId === viewerId ||
     viewerContext.followedUserIds.has(targetPost.userId)
   );
+}
+
+function scorePostForYou(
+  targetPost: {
+    id: number;
+    userId: string;
+    createdAt: Date;
+    likes?: { userId: string }[];
+    comments?: { userId: string }[];
+    reposts?: { userId: string }[];
+    quotePosts?: { userId: string }[];
+    postHashtags?: { hashtag?: { name: string } | null }[];
+  },
+  viewerId: string | null,
+  viewerContext: ViewerFeedContext | null,
+) {
+  const ageHours = Math.max(
+    0,
+    (Date.now() - targetPost.createdAt.getTime()) / 3_600_000,
+  );
+  const recencyScore = Math.max(0, 72 - ageHours);
+  const likeCount = targetPost.likes?.length ?? 0;
+  const commentCount = targetPost.comments?.length ?? 0;
+  const repostCount =
+    (targetPost.reposts?.length ?? 0) + (targetPost.quotePosts?.length ?? 0);
+
+  let score = recencyScore + likeCount * 2 + commentCount * 3 + repostCount * 2;
+
+  if (!viewerId || !viewerContext) {
+    return score;
+  }
+
+  if (viewerContext.followedUserIds.has(targetPost.userId)) {
+    score += 25;
+  }
+
+  if (viewerContext.interactedAuthorIds.has(targetPost.userId)) {
+    score += 18;
+  }
+
+  const matchingHashtagCount = (targetPost.postHashtags ?? []).filter((entry) =>
+    entry.hashtag?.name
+      ? viewerContext.interestedHashtags.has(entry.hashtag.name)
+      : false,
+  ).length;
+  score += Math.min(matchingHashtagCount * 12, HASHTAG_INTEREST_BOOST_CAP);
+
+  const followedUserEngaged = [
+    ...(targetPost.likes ?? []),
+    ...(targetPost.comments ?? []),
+    ...(targetPost.reposts ?? []),
+    ...(targetPost.quotePosts ?? []),
+  ].some((interaction) =>
+    viewerContext.followedUserIds.has(interaction.userId),
+  );
+
+  if (followedUserEngaged) {
+    score += 8;
+  }
+
+  if (targetPost.userId === viewerId) {
+    score -= 10;
+  }
+
+  if (viewerContext.interactedPostIds.has(targetPost.id)) {
+    score -= 15;
+  }
+
+  return score;
 }
 
 async function getViewerFeedContext(userId: string): Promise<ViewerFeedContext> {
@@ -249,6 +319,7 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
         itemType: 'post' as const,
         createdAt: post.createdAt,
         post: toPostDto(post),
+        score: scorePostForYou(post, viewerId, viewerContext),
       }));
 
     const reposts = await db.query.repost.findMany({
@@ -270,11 +341,18 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
         createdAt: repost.createdAt,
         repostedBy: repost.user,
         originalPost: toPostDto(repost.post),
+        score: scorePostForYou(repost.post, viewerId, viewerContext),
       }));
 
-    const result = [...resultPosts, ...resultReposts].sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-    );
+    const result = [...resultPosts, ...resultReposts]
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      })
+      .map(({ score, ...item }) => item);
 
     return res
       .status(200)

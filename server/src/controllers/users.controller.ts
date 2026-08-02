@@ -13,8 +13,19 @@ export async function me(req: Request, res: Response) {
     throw new AppError('User not logged in', 400);
   }
 
+  const currentUser = await db.query.user.findFirst({
+    where: eq(user.id, req.session.user.id),
+  });
+
+  if (!currentUser) {
+    throw new AppError('User not found', 404);
+  }
+
   return res.json(
-    new APIResponse('User session fetched successfully', 200, req.session),
+    new APIResponse('User session fetched successfully', 200, {
+      ...req.session,
+      user: currentUser,
+    }),
   );
 }
 

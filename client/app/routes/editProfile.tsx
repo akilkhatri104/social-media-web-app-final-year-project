@@ -57,11 +57,14 @@ export default function EditProfile() {
       });
 
       toast.success("Profile updated successfully!");
-      queryClient.setQueryData(queryKeys.auth.me, res.data?.data?.user)
-      queryClient.setQueryData(queryKeys.users.byUsername(username), res.data?.data?.user)
+      const updatedUser = res.data?.data?.user;
+      queryClient.setQueryData(queryKeys.auth.me, updatedUser)
+      queryClient.setQueryData(queryKeys.users.byUsername(updatedUser?.username), updatedUser)
+      queryClient.setQueryData(queryKeys.users.byUsername(updatedUser?.displayUsername), updatedUser)
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
       queryClient.invalidateQueries({ queryKey: queryKeys.users.byUsername(user?.username) })
-      navigate(`/@${username}`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.byUsername(user?.displayUsername) })
+      navigate(`/@${updatedUser?.displayUsername ?? username}`);
     } catch (error) {
       toast.error(
         axios.isAxiosError(error)

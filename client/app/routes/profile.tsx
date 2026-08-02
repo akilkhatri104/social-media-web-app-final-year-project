@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { queryClient, queryKeys } from "~/lib/react-query";
 import { Button } from "~/components/ui/button";
 import { UserAvatar } from "~/components/UserAvatar";
 import { useMe } from "~/hooks/useMe";
@@ -7,12 +8,22 @@ import { useDocumentTitle } from "~/lib/title";
 export default function Profile() {
 
   const [activeTab, setActiveTab] = useState("posts");
-  const { data, isLoading } = useMe();
-  const profileTitle = data?.name ? `${data.name} (@${data.displayUsername})` : "Profile";
+   const { data, isLoading } = useMe();
+   const user = data;
+   const profileTitle = user?.name ? `${user.name} (@${user.displayUsername})` : "Profile";
 
-  useDocumentTitle(profileTitle);
+   useEffect(() => {
+     // Always refetch the latest user on mount (fixes stale avatar)
+     queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
+   }, []);
 
-  const user = data?.data?.user;
+   useEffect(() => {
+     // DEV: Log the user image to debug avatar issues
+     console.log("[Profile Page] user.image=", user?.image);
+   }, [user]);
+
+   useDocumentTitle(profileTitle);
+
 
   if (isLoading) {
     return (

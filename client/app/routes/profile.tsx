@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
+import { UserAvatar } from "~/components/UserAvatar";
 import { useMe } from "~/hooks/useMe";
 import { useDocumentTitle } from "~/lib/title";
 
@@ -36,12 +37,12 @@ export default function Profile() {
       <div className="flex items-center gap-10">
 
         {/* Avatar */}
-        <img
-          src={
-            user?.image ||
-            `https://ui-avatars.com/api/?name=${user?.displayUsername}`
-          }
-          className="w-32 h-32 rounded-full border-2 border-white"
+        <UserAvatar
+          image={user?.image}
+          name={user?.name}
+          username={user?.username}
+          displayUsername={user?.displayUsername}
+          className="w-32 h-32 border-2 border-white"
         />
 
         {/* Info */}

@@ -7,9 +7,9 @@ import { Textarea } from "~/components/ui/textarea";
 import { toast } from "sonner";
 import { queryClient, queryKeys } from "~/lib/react-query";
 import { useNavigate } from "react-router";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import axios from "axios";
 import { useDocumentTitle } from "~/lib/title";
+import { UserAvatar } from "~/components/UserAvatar";
 
 export default function EditProfile() {
   useDocumentTitle("Edit Profile");
@@ -82,13 +82,13 @@ export default function EditProfile() {
 
       {/* Profile Picture */}
       <div className="flex flex-col items-center gap-3">
-        <Avatar
+        <UserAvatar
+          image={imagePreview}
+          name={name}
+          username={username}
           className="w-24 h-24 cursor-pointer"
           onClick={() => fileInputRef.current?.click()}
-        >
-          <AvatarImage src={imagePreview || undefined} />
-          <AvatarFallback>{name?.charAt(0)}</AvatarFallback>
-        </Avatar>
+        />
         <button
           onClick={() => fileInputRef.current?.click()}
           className="text-sm text-blue-400 hover:underline"

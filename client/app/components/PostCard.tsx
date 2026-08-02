@@ -37,7 +37,6 @@ import {
     CarouselPrevious,
 } from "~/components/ui/carousel";
 
-import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
 import { Pencil, Bookmark, EllipsisVerticalIcon, Heart, MessageCircle, Repeat2, Share2Icon, Trash2Icon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 
@@ -53,6 +52,7 @@ import PostComposer from "./PostComposer";
 import FollowButton from "./FollowButton";
 import { cn } from "~/lib/utils";
 import { QuotedPostEmbed } from "./QuotedPostEmbed";
+import { UserAvatar } from "./UserAvatar";
 import { LinkifiedText } from "./LinkifiedText";
 
 type Props = {
@@ -220,12 +220,11 @@ const PostCard = ({ post }: Props) => {
 
                 {/* Avatar */}
                 <Link to={`/@${author?.displayUsername}`}>
-                    <Avatar>
-                        <AvatarImage src={author?.image} />
-                        <AvatarFallback>
-                            {author?.name?.charAt(0) ?? "U"}
-                        </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar
+                        image={author?.image}
+                        name={author?.name}
+                        displayUsername={author?.displayUsername}
+                    />
                 </Link>
 
                 {/* Content */}

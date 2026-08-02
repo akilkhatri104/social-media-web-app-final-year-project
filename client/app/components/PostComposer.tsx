@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
 import { ImagePlus, Loader2, X } from "lucide-react";
@@ -10,6 +9,7 @@ import { queryKeys } from "~/lib/react-query";
 import { NavLink, useNavigate } from "react-router";
 import { toast } from "sonner";
 import axios from "axios";
+import { UserAvatar } from "./UserAvatar";
 
 type Props = {
     parentPostId?: number;
@@ -89,10 +89,12 @@ export default function PostComposer({
     return !isInitialLoading && !isAuth ? <div className="flex gap-4 p-4 border-b"><NavLink className='hover:underline text-accent-foreground' to='/signin'>Signin</NavLink>or<NavLink className='hover:underline text-accent-foreground' to='/signup'>Signup</NavLink> to make your post!</div> : (
         <div className="flex gap-4 p-4 border-b" id={id}>
             <NavLink to={`/@${data?.displayUsername}`}>
-                <Avatar className="cursor-pointer">
-                    <AvatarImage src={data?.image} />
-                    <AvatarFallback>{data?.displayUsername?.[0]}</AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                    image={data?.image}
+                    name={data?.name}
+                    displayUsername={data?.displayUsername}
+                    className="cursor-pointer"
+                />
             </NavLink>
 
             <div className="flex-1 space-y-3">

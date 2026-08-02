@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router";
 import { api } from "~/lib/axios";
 import { useMe } from "~/hooks/useMe";
 import type { APIResponse, UserDto, MessageDto, ConversationDto } from "~/lib/types";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { UserAvatar } from "~/components/UserAvatar";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { 
@@ -25,7 +25,6 @@ interface MessageBubbleItemProps {
   isMe: boolean;
   meId?: string;
   onReply: (msg: MessageDto) => void;
-  getInitials: (name: string) => string;
   formatTime: (isoString: string) => string;
   onScrollToMessage: (id: number) => void;
   isHighlighted: boolean;
@@ -36,7 +35,6 @@ function MessageBubbleItem({
   isMe,
   meId,
   onReply,
-  getInitials,
   formatTime,
   onScrollToMessage,
   isHighlighted,
@@ -303,16 +301,6 @@ export default function MessagesRoute() {
     setSearchQuery(""); // Clear search to show recent conversations
   };
 
-  const getInitials = (name: string = "") => {
-    if (!name) return "U";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   const formatTime = (isoString: string) => {
     const date = new Date(isoString);
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -390,10 +378,12 @@ export default function MessagesRoute() {
                     onClick={() => selectUserFromSearch(user)}
                     className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-accent text-left transition-all"
                   >
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.image || undefined} alt={user.name} />
-                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar
+                      image={user.image}
+                      name={user.name}
+                      username={user.username}
+                      className="h-10 w-10"
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-foreground truncate">{user.name}</p>
                       <p className="text-xs text-muted-foreground truncate">@{user.username || "student"}</p>
@@ -429,10 +419,12 @@ export default function MessagesRoute() {
                           : "hover:bg-accent hover:text-accent-foreground"
                       }`}
                     >
-                      <Avatar className="h-11 w-11 border-2 border-background/20">
-                        <AvatarImage src={chat.user.image || undefined} alt={chat.user.name} />
-                        <AvatarFallback>{getInitials(chat.user.name)}</AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        image={chat.user.image}
+                        name={chat.user.name}
+                        username={chat.user.username}
+                        className="h-11 w-11 border-2 border-background/20"
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-baseline mb-0.5">
                           <p className={`font-semibold truncate ${isActive ? "text-primary-foreground" : "text-foreground"}`}>
@@ -483,10 +475,12 @@ export default function MessagesRoute() {
               >
                 <ArrowLeftIcon className="h-5 w-5" />
               </Button>
-              <Avatar className="h-10 w-10 border border-border">
-                <AvatarImage src={activePartner.image || undefined} alt={activePartner.name} />
-                <AvatarFallback>{getInitials(activePartner.name)}</AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                image={activePartner.image}
+                name={activePartner.name}
+                username={activePartner.username}
+                className="h-10 w-10 border border-border"
+              />
               <div className="flex-1 min-w-0">
                 <h2 className="font-semibold text-foreground truncate">{activePartner.name}</h2>
                 <p className="text-xs text-muted-foreground truncate">@{activePartner.username || "student"}</p>
@@ -525,7 +519,6 @@ export default function MessagesRoute() {
                         isMe={isMe}
                         meId={me?.id}
                         onReply={setReplyingTo}
-                        getInitials={getInitials}
                         formatTime={formatTime}
                         onScrollToMessage={handleScrollToMessage}
                         isHighlighted={highlightedMessageId === msg.id}
@@ -535,10 +528,12 @@ export default function MessagesRoute() {
                 })
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-2 py-12">
-                  <Avatar className="h-16 w-16 mb-2">
-                    <AvatarImage src={activePartner.image || undefined} alt={activePartner.name} />
-                    <AvatarFallback>{getInitials(activePartner.name)}</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    image={activePartner.image}
+                    name={activePartner.name}
+                    username={activePartner.username}
+                    className="h-16 w-16 mb-2"
+                  />
                   <p className="font-semibold text-foreground">Say hello to {activePartner.name}!</p>
                   <p className="text-xs text-muted-foreground max-w-xs">This is the start of your message history with @{activePartner.username || "student"}.</p>
                 </div>

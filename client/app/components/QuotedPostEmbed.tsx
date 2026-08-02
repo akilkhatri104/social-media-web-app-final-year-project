@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import type { PostDto } from "~/lib/types";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { LinkifiedText } from "./LinkifiedText";
+import { UserAvatar } from "./UserAvatar";
 
 export function QuotedPostEmbed({ post }: { post: PostDto | null }) {
     if (!post) {
@@ -15,10 +15,11 @@ export function QuotedPostEmbed({ post }: { post: PostDto | null }) {
     return (
         <div className="mt-2 rounded-2xl border p-3 hover:bg-accent/40">
             <div className="text-sm flex items-center">
-                <Avatar>
-                    <AvatarImage src={post.author.image} />
-                    <AvatarFallback>{post.author.displayUsername[0]}</AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                    image={post.author?.image}
+                    name={post.author?.name}
+                    displayUsername={post.author?.displayUsername}
+                />
                 <span className="font-medium">{post.author?.name}</span>
                 <span className="ml-2 text-muted-foreground">
                     @{post.author?.displayUsername}

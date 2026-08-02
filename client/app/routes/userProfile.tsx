@@ -11,12 +11,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import FollowButton from "~/components/FollowButton";
 import { Button } from "~/components/ui/button";
 import { queryKeys } from "~/lib/react-query";
 import { Spinner } from "~/components/ui/spinner";
 import { useDocumentTitle } from "~/lib/title";
+import { UserAvatar } from "~/components/UserAvatar";
 
 export default function UserProfile() {
   const { username } = useParams();
@@ -82,9 +82,12 @@ export default function UserProfile() {
   return (
     <div className="text-white">
       <div className="flex items-center gap-10 p-10">
-        <img
-          src={userData.image || `https://ui-avatars.com/api/?name=${userData.displayUsername}`}
-          className="w-32 h-32 rounded-full border-2 border-white"
+        <UserAvatar
+          image={userData.image}
+          name={userData.name}
+          username={userData.username}
+          displayUsername={userData.displayUsername}
+          className="w-32 h-32 border-2 border-white"
         />
         <div>
           <h2 className="text-2xl font-bold">
@@ -142,10 +145,12 @@ export default function UserProfile() {
                 onClick={() => setFollowDialog(null)}
                 className="flex items-center gap-3 py-2 hover:bg-muted px-2 rounded"
               >
-                <Avatar>
-                  <AvatarImage src={f.image} />
-                  <AvatarFallback>{f.name?.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  image={f.image}
+                  name={f.name}
+                  username={f.username}
+                  displayUsername={f.displayUsername}
+                />
                 <div>
                   <p className="font-semibold">{f.name}</p>
                   <p className="text-sm text-muted-foreground">@{f.displayUsername}</p>
@@ -173,10 +178,12 @@ export default function UserProfile() {
                 onClick={() => setFollowDialog(null)}
                 className="flex items-center gap-3 py-2 hover:bg-muted px-2 rounded"
               >
-                <Avatar>
-                  <AvatarImage src={f.image} />
-                  <AvatarFallback>{f.name?.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  image={f.image}
+                  name={f.name}
+                  username={f.username}
+                  displayUsername={f.displayUsername}
+                />
                 <div>
                   <p className="font-semibold">{f.name}</p>
                   <p className="text-sm text-muted-foreground">@{f.displayUsername}</p>

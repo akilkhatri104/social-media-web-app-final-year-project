@@ -15,6 +15,7 @@ type ViewerFeedContext = {
 };
 
 const FOR_YOU_CANDIDATE_LIMIT = 200;
+const FOR_YOU_REPOST_CANDIDATE_LIMIT = 200;
 const FOR_YOU_RESULT_LIMIT = 50;
 const HASHTAG_INTEREST_BOOST_CAP = 36;
 
@@ -325,6 +326,7 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
 
     const reposts = await db.query.repost.findMany({
       orderBy: desc(repost.createdAt),
+      limit: FOR_YOU_REPOST_CANDIDATE_LIMIT,
       with: {
         user: true,
         post: {

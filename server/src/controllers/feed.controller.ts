@@ -14,6 +14,8 @@ type ViewerFeedContext = {
   interestedHashtags: Set<string>;
 };
 
+const FOR_YOU_CANDIDATE_LIMIT = 200;
+
 function postWithFeedRelations() {
   return {
     author: true,
@@ -215,13 +217,14 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
       : null;
     void viewerContext;
 
-    const fetchedPosts = await db.query.post.findMany({
+    const candidatePosts = await db.query.post.findMany({
       where: isNull(post.parentPostId),
       with: postWithFeedRelations(),
       orderBy: desc(post.createdAt),
+      limit: FOR_YOU_CANDIDATE_LIMIT,
     });
 
-    const resultPosts = fetchedPosts.map((post) => ({
+    const resultPosts = candidatePosts.map((post) => ({
       itemType: 'post' as const,
       createdAt: post.createdAt,
       post: toPostDto(post),

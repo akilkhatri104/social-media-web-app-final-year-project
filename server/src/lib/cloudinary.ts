@@ -6,6 +6,9 @@ import {
 } from 'cloudinary';
 import { AppError } from '../middlewares/errorHandler.ts';
 
+type CloudinaryResourceType = 'auto' | 'image' | 'video' | 'raw' | undefined;
+type CloudinaryDestroyResourceType = 'image' | 'video' | 'raw';
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
   api_key: process.env.CLOUDINARY_API_KEY!,
@@ -14,7 +17,7 @@ cloudinary.config({
 
 export const uploadToCloudinary = async (
   buffer: Buffer<ArrayBufferLike>,
-  resourceType: 'auto' | 'image' | 'video' | 'raw' | undefined = 'auto',
+  resourceType: CloudinaryResourceType = 'auto',
 ): Promise<UploadApiResponse> => {
   try {
     const result: UploadApiResponse = await new Promise((resolve, reject) => {
@@ -39,7 +42,7 @@ export const uploadToCloudinary = async (
 
 export const generateThumbnail = (
   public_id: string,
-  resource_type: 'auto' | 'image' | 'video' | 'raw' | undefined = 'auto',
+  resource_type: CloudinaryResourceType = 'auto',
 ) =>
   cloudinary.url(public_id, {
     width: 400,
@@ -53,10 +56,14 @@ export const generateThumbnail = (
 
 export const deleteFromCloudinary = async (
   url: string,
-  resource_type: 'auto' | 'image' | 'video' | 'raw' | undefined = 'auto',
+  resource_type: CloudinaryResourceType = 'image',
 ) => {
   try {
     const publicId = getPublicId(url);
+    const destroyResourceType: CloudinaryDestroyResourceType =
+      resource_type === 'video' || resource_type === 'raw'
+        ? resource_type
+        : 'image';
 
     if (!publicId) {
       throw new Error('Invalid public ID');
@@ -69,7 +76,7 @@ export const deleteFromCloudinary = async (
 
     const result: DeleteApiResponse = await cloudinary.uploader.destroy(
       publicId,
-      { resource_type },
+      { resource_type: destroyResourceType },
     );
 
     if (!result) {

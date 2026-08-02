@@ -5,6 +5,7 @@ import { follow, post, repost } from '../lib/db/schema.ts';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
 import { toPostDto } from '../lib/postDto.ts';
+import { auth } from '../lib/auth.ts';
 
 function postWithFeedRelations() {
   return {
@@ -95,6 +96,12 @@ export async function getFollowingFeed(req: Request, res: Response) {
 
 export async function getSimpleForYouFeed(req: Request, res: Response) {
   try {
+    const session = await auth.api.getSession({
+      headers: req.headers,
+    });
+
+    req.session = session;
+
     const fetchedPosts = await db.query.post.findMany({
       where: isNull(post.parentPostId),
       with: postWithFeedRelations(),

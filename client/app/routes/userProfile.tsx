@@ -73,7 +73,11 @@ export default function UserProfile() {
   if (userLoading) return <p className="p-10 text-white">Loading...</p>;
   if (!userData) return <p className="p-10 text-white">User not found</p>;
 
-  const isOwnProfile = session?.id === userData?.id;
+  const isOwnProfile =
+    String(session?.id ?? "") === String(userData?.id ?? "") ||
+    [session?.username, session?.displayUsername]
+      .filter(Boolean)
+      .some((name) => name?.toLowerCase() === cleanUsername?.toLowerCase());
 
   return (
     <div className="text-white">

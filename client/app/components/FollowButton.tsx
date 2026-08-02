@@ -20,7 +20,7 @@ function FollowButton({ userId, className }: Props) {
     const { isInitialLoading, isAuth, data: user } = useMe()
     const viewerId = user?.id
     const isGuest = !isInitialLoading && !isAuth
-    const isSelf = isAuth && viewerId == userId
+    const isSelf = isAuth && String(viewerId ?? "") === String(userId ?? "")
     const [authDialogOpen, setAuthDialogOpen] = useState(false)
     const [isFollowButtonDisabled, setIsFollowButtonDisabled] = useState(false)
 
@@ -77,6 +77,10 @@ function FollowButton({ userId, className }: Props) {
     const handleClick = () => {
         if (isGuest) {
             setAuthDialogOpen(true)
+            return
+        }
+
+        if (isSelf) {
             return
         }
 

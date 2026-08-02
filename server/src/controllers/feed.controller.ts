@@ -69,6 +69,25 @@ function addPostToViewerContext(
   }
 }
 
+function canViewPostInForYou(
+  targetPost: { userId: string; visibility: 'public' | 'followers' | null },
+  viewerId: string | null,
+  viewerContext: ViewerFeedContext | null,
+) {
+  if (targetPost.visibility !== 'followers') {
+    return true;
+  }
+
+  if (!viewerId || !viewerContext) {
+    return false;
+  }
+
+  return (
+    targetPost.userId === viewerId ||
+    viewerContext.followedUserIds.has(targetPost.userId)
+  );
+}
+
 async function getViewerFeedContext(userId: string): Promise<ViewerFeedContext> {
   const context: ViewerFeedContext = {
     followedUserIds: new Set<string>(),
@@ -215,7 +234,7 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
     const viewerContext = session
       ? await getViewerFeedContext(session.user.id)
       : null;
-    void viewerContext;
+    const viewerId = session?.user.id ?? null;
 
     const candidatePosts = await db.query.post.findMany({
       where: isNull(post.parentPostId),
@@ -224,11 +243,13 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
       limit: FOR_YOU_CANDIDATE_LIMIT,
     });
 
-    const resultPosts = candidatePosts.map((post) => ({
-      itemType: 'post' as const,
-      createdAt: post.createdAt,
-      post: toPostDto(post),
-    }));
+    const resultPosts = candidatePosts
+      .filter((post) => canViewPostInForYou(post, viewerId, viewerContext))
+      .map((post) => ({
+        itemType: 'post' as const,
+        createdAt: post.createdAt,
+        post: toPostDto(post),
+      }));
 
     const reposts = await db.query.repost.findMany({
       orderBy: desc(repost.createdAt),
@@ -240,12 +261,16 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
       },
     });
 
-    const resultReposts = reposts.map((repost) => ({
-      itemType: 'repost' as const,
-      createdAt: repost.createdAt,
-      repostedBy: repost.user,
-      originalPost: toPostDto(repost.post),
-    }));
+    const resultReposts = reposts
+      .filter((repost) =>
+        canViewPostInForYou(repost.post, viewerId, viewerContext),
+      )
+      .map((repost) => ({
+        itemType: 'repost' as const,
+        createdAt: repost.createdAt,
+        repostedBy: repost.user,
+        originalPost: toPostDto(repost.post),
+      }));
 
     const result = [...resultPosts, ...resultReposts].sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),

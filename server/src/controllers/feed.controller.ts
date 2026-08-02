@@ -6,6 +6,37 @@ import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
 import { toPostDto } from '../lib/postDto.ts';
 
+function postWithFeedRelations() {
+  return {
+    author: true,
+    likes: true,
+    media: true,
+    postHashtags: { with: { hashtag: true } },
+    reposts: true,
+    quotePosts: true,
+    parentPost: { with: { author: true } },
+    quotedPost: {
+      with: {
+        author: true,
+        likes: true,
+        media: true,
+        postHashtags: { with: { hashtag: true } },
+        comments: true,
+        reposts: true,
+        quotePosts: true,
+      },
+    },
+    comments: {
+      with: {
+        media: true,
+        likes: true,
+        author: true,
+        parentPost: { with: { author: true } },
+      },
+    },
+  } as const;
+}
+
 export async function getFollowingFeed(req: Request, res: Response) {
   try {
     if (!req.session) {
@@ -19,34 +50,7 @@ export async function getFollowingFeed(req: Request, res: Response) {
 
     const fetchedPosts = await db.query.post.findMany({
       where: and(isNull(post.parentPostId), inArray(post.userId, follows)),
-      with: {
-        author: true,
-        likes: true,
-        media: true,
-        postHashtags: { with: { hashtag: true } },
-        reposts: true,
-        quotePosts: true,
-        parentPost: { with: { author: true } },
-        quotedPost: {
-          with: {
-            author: true,
-            likes: true,
-            media: true,
-            postHashtags: { with: { hashtag: true } },
-            comments: true,
-            reposts: true,
-            quotePosts: true,
-          },
-        },
-        comments: {
-          with: {
-            media: true,
-            likes: true,
-            author: true,
-            parentPost: { with: { author: true } },
-          },
-        },
-      },
+      with: postWithFeedRelations(),
       orderBy: desc(post.createdAt),
     });
 
@@ -62,31 +66,7 @@ export async function getFollowingFeed(req: Request, res: Response) {
       with: {
         user: true,
         post: {
-          with: {
-            author: true,
-            likes: true,
-            media: true,
-            reposts: true,
-            quotePosts: true,
-            parentPost: { with: { author: true } },
-            quotedPost: {
-              with: {
-                author: true,
-                likes: true,
-                media: true,
-                comments: true,
-                reposts: true,
-                quotePosts: true,
-              },
-            },
-            comments: {
-              with: {
-                media: true,
-                likes: true,
-                author: true,
-              },
-            },
-          },
+          with: postWithFeedRelations(),
         },
       },
     });
@@ -117,34 +97,7 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
   try {
     const fetchedPosts = await db.query.post.findMany({
       where: isNull(post.parentPostId),
-      with: {
-        author: true,
-        likes: true,
-        media: true,
-        postHashtags: { with: { hashtag: true } },
-        reposts: true,
-        quotePosts: true,
-        parentPost: { with: { author: true } },
-        quotedPost: {
-          with: {
-            author: true,
-            likes: true,
-            media: true,
-            postHashtags: { with: { hashtag: true } },
-            comments: true,
-            reposts: true,
-            quotePosts: true,
-          },
-        },
-        comments: {
-          with: {
-            media: true,
-            likes: true,
-            author: true,
-            parentPost: { with: { author: true } },
-          },
-        },
-      },
+      with: postWithFeedRelations(),
       orderBy: desc(post.createdAt),
     });
 
@@ -159,31 +112,7 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
       with: {
         user: true,
         post: {
-          with: {
-            author: true,
-            likes: true,
-            media: true,
-            reposts: true,
-            quotePosts: true,
-            parentPost: { with: { author: true } },
-            quotedPost: {
-              with: {
-                author: true,
-                likes: true,
-                media: true,
-                comments: true,
-                reposts: true,
-                quotePosts: true,
-              },
-            },
-            comments: {
-              with: {
-                media: true,
-                likes: true,
-                author: true,
-              },
-            },
-          },
+          with: postWithFeedRelations(),
         },
       },
     });

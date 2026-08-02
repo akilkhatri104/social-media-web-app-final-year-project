@@ -15,6 +15,7 @@ type ViewerFeedContext = {
 };
 
 const FOR_YOU_CANDIDATE_LIMIT = 200;
+const FOR_YOU_RESULT_LIMIT = 50;
 const HASHTAG_INTEREST_BOOST_CAP = 36;
 
 function postWithFeedRelations() {
@@ -352,6 +353,7 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
 
         return b.createdAt.getTime() - a.createdAt.getTime();
       })
+      .slice(0, FOR_YOU_RESULT_LIMIT)
       .map(({ score, ...item }) => item);
 
     return res

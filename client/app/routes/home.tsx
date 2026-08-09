@@ -60,6 +60,9 @@ export default function Home() {
       return res.data.data as FeedItem[];
     },
     enabled: mounted,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    staleTime: Infinity,
   });
 
 
@@ -128,8 +131,14 @@ export default function Home() {
             </div>
           ) : (
             <div className="w-full">
-              {data?.map((item: FeedItem, index: number) => (
-                <div key={`${item.itemType}-${index}`}>
+              {data?.map((item: FeedItem) => (
+                <div
+                  key={
+                    item.itemType === "post"
+                      ? `post-${item.post.id}`
+                      : `repost-${item.originalPost.id}-${item.repostedBy?.id ?? item.createdAt}`
+                  }
+                >
                   {item.itemType === 'post' ? (
                     <PostCard post={item.post} />
                   ) : (

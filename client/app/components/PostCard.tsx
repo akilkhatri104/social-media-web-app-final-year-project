@@ -65,6 +65,60 @@ type Props = {
   post: any;
 };
 
+const updatePostInData = (
+  data: any,
+  postId: string | number,
+  updater: (post: any) => any,
+): any => {
+  if (!data) return data;
+
+  if (Array.isArray(data)) {
+    let changed = false;
+    const next = data.map((item) => {
+      const updated = updatePostInData(item, postId, updater);
+      changed ||= updated !== item;
+      return updated;
+    });
+    return changed ? next : data;
+  }
+
+  if (typeof data !== "object") return data;
+
+  let next = data;
+  const isPost =
+    data.id === postId &&
+    ("likeCount" in data || "repostCount" in data || "commentCount" in data);
+
+  if (isPost) {
+    next = updater(data);
+  }
+
+  for (const [key, value] of Object.entries(next)) {
+    if (!value || typeof value !== "object") continue;
+    const updated = updatePostInData(value, postId, updater);
+    if (updated !== value) {
+      next = next === data ? { ...data } : { ...next };
+      next[key] = updated;
+    }
+  }
+
+  return next;
+};
+
+const updateCachedPost = (
+  postId: string | number,
+  updater: (post: any) => any,
+) => {
+  queryClient.setQueriesData(
+    { queryKey: queryKeys.posts.all },
+    (data: any) => updatePostInData(data, postId, updater),
+  );
+  queryClient.setQueriesData(
+    { queryKey: queryKeys.bookmarks.all },
+    (data: any) => updatePostInData(data, postId, updater),
+  );
+};
+
 const PostCard = ({ post }: Props) => {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeletedDialogOpen] = useState(false);
@@ -115,7 +169,40 @@ const PostCard = ({ post }: Props) => {
       const response = await api.post<APIResponse>(`/api/likes/${post.id}`);
       return response.data;
     },
-    onError: (err) => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.posts.likeStatus(post.id),
+      });
+
+      const previousStatus =
+        queryClient.getQueryData<boolean>(queryKeys.posts.likeStatus(post.id)) ??
+        !!likeStatus;
+      const nextStatus = !previousStatus;
+
+      queryClient.setQueryData(queryKeys.posts.likeStatus(post.id), nextStatus);
+      updateCachedPost(post.id, (cachedPost) => ({
+        ...cachedPost,
+        likeCount: Math.max(
+          0,
+          (cachedPost.likeCount ?? 0) + (nextStatus ? 1 : -1),
+        ),
+      }));
+
+      return { previousStatus };
+    },
+    onError: (err, _, context) => {
+      const previousStatus = context?.previousStatus ?? false;
+      queryClient.setQueryData(
+        queryKeys.posts.likeStatus(post.id),
+        previousStatus,
+      );
+      updateCachedPost(post.id, (cachedPost) => ({
+        ...cachedPost,
+        likeCount: Math.max(
+          0,
+          (cachedPost.likeCount ?? 0) + (previousStatus ? 1 : -1),
+        ),
+      }));
       toast.error(
         axios.isAxiosError(err)
           ? err?.response?.data.message
@@ -123,7 +210,6 @@ const PostCard = ({ post }: Props) => {
       );
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
       toast.success(data.message, {
         action: {
           label: "Undo",
@@ -146,7 +232,40 @@ const PostCard = ({ post }: Props) => {
       const response = await api.post<APIResponse>(`/api/repost/${post.id}`);
       return response.data;
     },
-    onError: (err) => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.repost.status(post.id),
+      });
+
+      const previousStatus =
+        queryClient.getQueryData<boolean>(queryKeys.repost.status(post.id)) ??
+        !!repostStatus;
+      const nextStatus = !previousStatus;
+
+      queryClient.setQueryData(queryKeys.repost.status(post.id), nextStatus);
+      updateCachedPost(post.id, (cachedPost) => ({
+        ...cachedPost,
+        repostCount: Math.max(
+          0,
+          (cachedPost.repostCount ?? 0) + (nextStatus ? 1 : -1),
+        ),
+      }));
+
+      return { previousStatus };
+    },
+    onError: (err, _, context) => {
+      const previousStatus = context?.previousStatus ?? false;
+      queryClient.setQueryData(
+        queryKeys.repost.status(post.id),
+        previousStatus,
+      );
+      updateCachedPost(post.id, (cachedPost) => ({
+        ...cachedPost,
+        repostCount: Math.max(
+          0,
+          (cachedPost.repostCount ?? 0) + (previousStatus ? 1 : -1),
+        ),
+      }));
       toast.error(
         axios.isAxiosError(err)
           ? err?.response?.data.message
@@ -154,10 +273,6 @@ const PostCard = ({ post }: Props) => {
       );
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.repost.status(post.id),
-      });
       toast.success(data.message, {
         action: {
           label: "Undo",
@@ -422,13 +537,20 @@ const PostCard = ({ post }: Props) => {
       </Link>
 
       {/* Actions */}
-      <CardFooter className="flex justify-between p-2">
+      <CardFooter
+        className="flex justify-between p-2"
+        onClick={(e) => e.stopPropagation()}
+      >
         <Dialog>
           <DialogTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
               className="flex items-center gap-2 text-muted-foreground"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
             >
               <MessageCircle size={18} />
               {post?.commentCount ?? 0}
@@ -448,6 +570,10 @@ const PostCard = ({ post }: Props) => {
               variant="ghost"
               size="sm"
               disabled={repostMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               className={cn("flex items-center text-muted-foreground gap-2", {
                 "text-primary": !!repostStatus,
               })}
@@ -457,10 +583,22 @@ const PostCard = ({ post }: Props) => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => repostMutation.mutate()}>
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                repostMutation.mutate();
+              }}
+            >
               <Repeat2 /> {!!repostStatus ? "Unrepost" : "Repost"}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setRepostDialogOpen(true)}>
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setRepostDialogOpen(true);
+              }}
+            >
               <Pencil /> Quote Repost
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -480,7 +618,9 @@ const PostCard = ({ post }: Props) => {
           size="sm"
           disabled={likeMutation.isPending}
           className="flex items-center gap-2 text-muted-foreground"
-          onClick={() => {
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             likeMutation.mutate();
           }}
         >
@@ -495,7 +635,9 @@ const PostCard = ({ post }: Props) => {
           className={cn("flex items-center text-muted-foreground gap-2", {
             "text-primary": !!bookmarkStatus,
           })}
-          onClick={() => {
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             if (!isAuth) {
               toast.error("Please sign in to bookmark posts");
               return;

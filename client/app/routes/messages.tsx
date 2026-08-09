@@ -13,11 +13,11 @@ import {
   MessageSquareIcon, 
   UserPlusIcon, 
   ArrowLeftIcon,
-  Loader2Icon,
   CornerUpLeftIcon,
   XIcon
 } from "lucide-react";
 import { toast } from "sonner";
+import { LoadingState, Spinner } from "~/components/ui/spinner";
 
 // INDIVIDUAL MESSAGE ITEM COMPONENT WITH GESTURE SWIPING & HOVER REPLY
 interface MessageBubbleItemProps {
@@ -368,9 +368,7 @@ export default function MessagesRoute() {
                 Search Results
               </p>
               {isSearching ? (
-                <div className="flex items-center justify-center p-8">
-                  <Loader2Icon className="h-6 w-6 animate-spin text-primary" />
-                </div>
+                <LoadingState label="Searching users..." variant="section" />
               ) : searchResults.length > 0 ? (
                 searchResults.map((user) => (
                   <button
@@ -399,9 +397,7 @@ export default function MessagesRoute() {
             <div className="p-2 space-y-1">
               <p className="text-xs font-semibold text-muted-foreground px-3 py-1">Recent Chats</p>
               {isConversationsLoading ? (
-                <div className="flex items-center justify-center p-8">
-                  <Loader2Icon className="h-6 w-6 animate-spin text-primary" />
-                </div>
+                <LoadingState label="Loading conversations..." variant="section" />
               ) : conversations.length > 0 ? (
                 conversations.map((chat) => {
                   const isActive = chat.user.id === selectedUserId;
@@ -493,10 +489,7 @@ export default function MessagesRoute() {
               className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/10"
             >
               {isChatLoading && chatHistory.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full space-y-2">
-                  <Loader2Icon className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-xs text-muted-foreground">Loading chat history...</p>
-                </div>
+                <LoadingState label="Loading chat history..." className="h-full" spinnerClassName="size-8" />
               ) : chatHistory.length > 0 ? (
                 chatHistory.map((msg, index) => {
                   const isMe = msg.senderId === me?.id;
@@ -584,7 +577,7 @@ export default function MessagesRoute() {
                 className="h-11 w-11 rounded-xl shrink-0 transition-transform active:scale-95"
               >
                 {sendMessageMutation.isPending ? (
-                  <Loader2Icon className="h-5 w-5 animate-spin" />
+                  <Spinner className="size-5 text-current" />
                 ) : (
                   <SendIcon className="h-4 w-4" />
                 )}

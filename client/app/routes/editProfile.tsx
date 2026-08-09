@@ -10,6 +10,7 @@ import { useNavigate } from "react-router";
 import axios from "axios";
 import { useDocumentTitle } from "~/lib/title";
 import { UserAvatar } from "~/components/UserAvatar";
+import { LoadingState } from "~/components/ui/spinner";
 
 export default function EditProfile() {
   useDocumentTitle("Edit Profile");
@@ -77,7 +78,7 @@ export default function EditProfile() {
     }
   };
 
-  if (isLoading) return <p className="p-10 text-white">Loading...</p>;
+  if (isLoading) return <LoadingState label="Loading profile..." variant="page" />;
 
   return (
     <div className="max-w-xl mx-auto p-10 text-white space-y-6">

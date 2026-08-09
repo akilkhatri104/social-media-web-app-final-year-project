@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { ImagePlus, X } from "lucide-react";
 import { useMe } from "~/hooks/useMe";
 import { queryKeys } from "~/lib/react-query";
 import { NavLink, useNavigate } from "react-router";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { UserAvatar } from "./UserAvatar";
 import type { APIResponse, SearchUserResult } from "~/lib/types";
+import { Spinner } from "./ui/spinner";
 
 type Props = {
     parentPostId?: number;
@@ -209,7 +210,7 @@ export default function PostComposer({
                         className="rounded-full"
                     >
                         {mutation.isPending ? (
-                            <Loader2 className="animate-spin w-4 h-4" />
+                            <Spinner className="size-4 text-current" />
                         ) : parentPostId ? (
                             "Reply"
                         ) : (

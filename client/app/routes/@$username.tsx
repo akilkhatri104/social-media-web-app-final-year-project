@@ -2,6 +2,7 @@ import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import { UserAvatar } from "~/components/UserAvatar";
+import { LoadingState } from "~/components/ui/spinner";
 
 export default function UserProfile() {
 
@@ -17,7 +18,7 @@ export default function UserProfile() {
   });
 
   if (isLoading) {
-    return <div className="p-10 text-white">Loading profile...</div>;
+    return <LoadingState label="Loading profile..." variant="page" />;
   }
 
   const user = data;

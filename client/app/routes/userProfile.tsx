@@ -14,7 +14,7 @@ import {
 import FollowButton from "~/components/FollowButton";
 import { Button } from "~/components/ui/button";
 import { queryKeys } from "~/lib/react-query";
-import { Spinner } from "~/components/ui/spinner";
+import { LoadingState } from "~/components/ui/spinner";
 import { useDocumentTitle } from "~/lib/title";
 import { UserAvatar } from "~/components/UserAvatar";
 
@@ -91,7 +91,7 @@ const { data: likedPostsData, isLoading: likesLoading } = useQuery({
 });
 
 
-  if (userLoading) return <p className="p-10 text-white">Loading...</p>;
+  if (userLoading) return <LoadingState label="Loading profile..." variant="page" />;
   if (!userData) return <p className="p-10 text-white">User not found</p>;
 
   const isOwnProfile =
@@ -149,13 +149,13 @@ const { data: likedPostsData, isLoading: likesLoading } = useQuery({
         </div>
       </div>
 
-      {followersLoading ? <Spinner /> : (
+      {followersLoading ? <LoadingState label="Loading followers..." variant="section" /> : (
         <Dialog open={followDialog === "followers"} onOpenChange={(o) => !o && setFollowDialog(null)}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Followers</DialogTitle>
             </DialogHeader>
-            {followersLoading && <p>Loading...</p>}
+            {followersLoading && <LoadingState label="Loading followers..." variant="section" />}
             {!followersLoading && followersList && followersList?.followers?.length === 0 && (
               <p className="text-muted-foreground">No followers yet</p>
             )}
@@ -182,13 +182,13 @@ const { data: likedPostsData, isLoading: likesLoading } = useQuery({
         </Dialog>
       )}
 
-      {followingLoading ? <Spinner /> : (
+      {followingLoading ? <LoadingState label="Loading following..." variant="section" /> : (
         <Dialog open={followDialog === "following"} onOpenChange={(o) => !o && setFollowDialog(null)}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Following</DialogTitle>
             </DialogHeader>
-            {followingLoading && <p>Loading...</p>}
+            {followingLoading && <LoadingState label="Loading following..." variant="section" />}
             {!followingLoading && followingList && followingList?.following?.length === 0 && (
               <p className="text-muted-foreground">Not following anyone yet</p>
             )}
@@ -233,7 +233,7 @@ const { data: likedPostsData, isLoading: likesLoading } = useQuery({
 
       {activeTab === "posts" && (
         <div className="flex flex-col">
-          {postsLoading && <p className="p-10">Loading posts...</p>}
+          {postsLoading && <LoadingState label="Loading posts..." variant="section" />}
           {!postsLoading && postsData?.length === 0 && (
             <p className="p-10 text-gray-400">No posts yet</p>
           )}
@@ -248,7 +248,7 @@ const { data: likedPostsData, isLoading: likesLoading } = useQuery({
 
       {activeTab === "comments" && (
         <div className="flex flex-col">
-          {commentsLoading && <p className="p-10">Loading comments...</p>}
+          {commentsLoading && <LoadingState label="Loading comments..." variant="section" />}
           {!commentsLoading && commentsData?.length === 0 && (
             <p className="p-10 text-gray-400">No comments yet</p>
           )}
@@ -262,7 +262,7 @@ const { data: likedPostsData, isLoading: likesLoading } = useQuery({
       )}
       {activeTab === "likes" && (
         <div className="flex flex-col">
-          {likesLoading && <p className="p-10">Loading likes...</p>}
+          {likesLoading && <LoadingState label="Loading likes..." variant="section" />}
           {!likesLoading && likedPostsData?.length === 0 && (
             <p className="p-10 text-gray-400">No liked posts yet</p>
           )}

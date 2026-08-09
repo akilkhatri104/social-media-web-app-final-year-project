@@ -2,7 +2,7 @@ import type { Route } from "./+types/home";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import type { APIResponse, FeedItem } from "~/lib/types";
-import { HomeIcon, Loader2 } from "lucide-react";
+import { HomeIcon } from "lucide-react";
 import PostCard from "~/components/PostCard";
 import { Separator } from "~/components/ui/separator";
 import { NavLink } from "react-router";
@@ -23,7 +23,7 @@ import ProtectedRoute from "~/components/ProtectedRoute";
 import { useEffect, useState } from "react";
 import { queryKeys } from "~/lib/react-query";
 import RepostFeedCard from "~/components/RepostFeedCard";
-import { Spinner } from "~/components/ui/spinner";
+import { LoadingState, Spinner } from "~/components/ui/spinner";
 import { useDocumentTitle } from "~/lib/title";
 
 export function meta({ }: Route.MetaArgs) {
@@ -70,9 +70,7 @@ export default function Home() {
 
   if (isPending) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Spinner />
-      </div>
+      <LoadingState label="Loading posts..." variant="page" />
     );
   }
 
@@ -113,7 +111,7 @@ export default function Home() {
           {/* Refetch Loader */}
           {isFetching && !isPending && (
             <div className="flex justify-center py-4">
-              <Loader2 className="animate-spin w-5 h-5 text-primary" />
+              <Spinner className="size-5" />
             </div>
           )}
 

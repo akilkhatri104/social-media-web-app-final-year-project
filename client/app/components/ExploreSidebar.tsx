@@ -13,6 +13,7 @@ import { SearchBar } from "~/components/SearchBar"
 import { api } from "~/lib/axios"
 import type { APIResponse, TrendingHashtag } from "~/lib/types"
 import { queryKeys } from "~/lib/react-query"
+import { LoadingState } from "~/components/ui/spinner"
 
 const suggestedSearches = [
   "Find trending conversations",
@@ -55,7 +56,7 @@ export function ExploreSidebar() {
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               {isPending ? (
-                <p className="text-sm text-muted-foreground">Loading tags...</p>
+                <LoadingState label="Loading tags..." variant="inline" />
               ) : data && data.length > 0 ? (
                 data.map((tag, index) => (
                   <Link

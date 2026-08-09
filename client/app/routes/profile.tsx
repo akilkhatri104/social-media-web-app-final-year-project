@@ -4,6 +4,7 @@ import { Button } from "~/components/ui/button";
 import { UserAvatar } from "~/components/UserAvatar";
 import { useMe } from "~/hooks/useMe";
 import { useDocumentTitle } from "~/lib/title";
+import { LoadingState } from "~/components/ui/spinner";
 
 export default function Profile() {
 
@@ -26,11 +27,7 @@ export default function Profile() {
 
 
   if (isLoading) {
-    return (
-      <div className="p-10 text-white">
-        Loading profile...
-      </div>
-    );
+    return <LoadingState label="Loading profile..." variant="page" />;
   }
 
   if (!user) {

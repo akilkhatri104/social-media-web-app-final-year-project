@@ -4,6 +4,7 @@ import { api } from "~/lib/axios";
 import { queryClient, queryKeys } from "~/lib/react-query";
 import type { APIResponse } from "~/lib/types";
 import { Button } from "~/components/ui/button";
+import { LoadingState } from "~/components/ui/spinner";
 
 export default function NotificationsList() {
 
@@ -32,7 +33,7 @@ export default function NotificationsList() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
   });
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <LoadingState label="Loading notifications..." variant="section" />;
 
   return (
     <div className="p-4">

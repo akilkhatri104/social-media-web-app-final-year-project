@@ -3,11 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import PostCard from "~/components/PostCard";
 import PostComposer from "../components/PostComposer";
-import { Loader2 } from "lucide-react";
 import { Separator } from "~/components/ui/separator";
 import type { Route } from "./+types/post.$id";
 import { queryKeys } from "~/lib/react-query";
 import { truncateTitleSegment, useDocumentTitle } from "~/lib/title";
+import { LoadingState } from "~/components/ui/spinner";
 
 export async function clientLoader({ params }: Route.ClientActionArgs) {
     try {
@@ -41,11 +41,7 @@ export default function PostPage() {
     useDocumentTitle(postTitle);
 
     if (isPending) {
-        return (
-            <div className="flex justify-center items-center h-screen">
-                <Loader2 className="animate-spin w-8 h-8" />
-            </div>
-        );
+        return <LoadingState label="Loading post..." variant="page" />;
     }
 
     if (!data) {

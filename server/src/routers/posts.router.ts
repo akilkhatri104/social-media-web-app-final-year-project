@@ -5,6 +5,7 @@ import {
   deletePostByID,
   getPostByID,
   getPostFromUser,
+  getCommentsFromUser,
 } from '../controllers/posts.controller.ts';
 import { upload } from '../lib/multer.ts';
 
@@ -21,6 +22,7 @@ protectedRouter.delete('/:id', deletePostByID);
 //Public Routes
 publicRouter.get('/:id', getPostByID);
 publicRouter.get('/users/:id', getPostFromUser);
+publicRouter.get('/users/:id/comments', getCommentsFromUser);
 
 router.use(publicRouter);
 router.use(protectedRouter);

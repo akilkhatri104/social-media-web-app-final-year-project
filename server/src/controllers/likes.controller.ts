@@ -118,6 +118,50 @@ export async function getLikesCountByPostId(req: Request, res: Response) {
   }
 }
 
+export async function getLikedPostsFromUser(req: Request, res: Response) {
+  try {
+    if (!req.params || !req.params['id']) {
+      throw new AppError('No user ID provided', 400);
+    }
+    const userId = req.params['id'];
+    if (!userId || typeof userId !== 'string') {
+      throw new AppError('Invalid user ID provided', 400);
+    }
+    const likedEntries = await db.query.like.findMany({
+      where: eq(like.userId, userId),
+      with: {
+        post: {
+          with: {
+            likes: true,
+            media: true,
+            author: true,
+            postHashtags: { with: { hashtag: true } },
+            comments: {
+              with: { media: true, likes: true, author: true, postHashtags: { with: { hashtag: true } } },
+            },
+          },
+        },
+      },
+    });
+    const likedPosts = likedEntries
+      .filter(likeItem => likeItem.post)
+      .map(({ post }) => ({
+        ...post,
+        likeCount: post.likes?.length ?? 0,
+        comments: post.comments?.map((comment) => ({
+          ...comment,
+          likeCount: comment.likes?.length ?? 0,
+        })) ?? [],
+      }));
+    return res
+      .status(200)
+      .json(new APIResponse('Liked posts fetched successfully', 200, likedPosts));
+  } catch (error) {
+    console.error('getLikedPostsFromUser :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}
+
 export async function getLikeStatusByPostId(req: Request, res: Response) {
   try {
     if (!req.session) {

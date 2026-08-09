@@ -61,14 +61,35 @@ export default function UserProfile() {
     },
   });
 
-  const { data: postsData, isLoading: postsLoading } = useQuery({
-    queryKey: queryKeys.posts.byUserId(userData?.id),
-    queryFn: async () => {
-      const res = await api.get(`/api/posts/users/${userData?.id}`);
-      return res.data.data;
-    },
-    enabled: !!userData?.id
-  });
+const { data: postsData, isLoading: postsLoading } = useQuery({
+  queryKey: queryKeys.posts.byUserId(userData?.id),
+  queryFn: async () => {
+    const res = await api.get(`/api/posts/users/${userData?.id}`);
+    return res.data.data;
+  },
+  enabled: !!userData?.id
+});
+
+// Comments by user
+const { data: commentsData, isLoading: commentsLoading } = useQuery({
+  queryKey: ["comments", userData?.id],
+  queryFn: async () => {
+    const res = await api.get(`/api/posts/users/${userData?.id}/comments`);
+    return res.data.data;
+  },
+  enabled: !!userData?.id,
+});
+
+// Liked posts by user
+const { data: likedPostsData, isLoading: likesLoading } = useQuery({
+  queryKey: ["likes", userData?.id],
+  queryFn: async () => {
+    const res = await api.get(`/api/likes/users/${userData?.id}`);
+    return res.data.data;
+  },
+  enabled: !!userData?.id,
+});
+
 
   if (userLoading) return <p className="p-10 text-white">Loading...</p>;
   if (!userData) return <p className="p-10 text-white">User not found</p>;
@@ -225,8 +246,34 @@ export default function UserProfile() {
         </div>
       )}
 
-      {activeTab === "comments" && <p className="p-10 text-gray-400">Comments coming soon</p>}
-      {activeTab === "likes" && <p className="p-10 text-gray-400">Likes coming soon</p>}
+      {activeTab === "comments" && (
+        <div className="flex flex-col">
+          {commentsLoading && <p className="p-10">Loading comments...</p>}
+          {!commentsLoading && commentsData?.length === 0 && (
+            <p className="p-10 text-gray-400">No comments yet</p>
+          )}
+          {commentsData?.map((post: any) => (
+            <div key={post.id}>
+              <PostCard post={post} />
+              <Separator />
+            </div>
+          ))}
+        </div>
+      )}
+      {activeTab === "likes" && (
+        <div className="flex flex-col">
+          {likesLoading && <p className="p-10">Loading likes...</p>}
+          {!likesLoading && likedPostsData?.length === 0 && (
+            <p className="p-10 text-gray-400">No liked posts yet</p>
+          )}
+          {likedPostsData?.map((post: any) => (
+            <div key={post.id}>
+              <PostCard post={post} />
+              <Separator />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

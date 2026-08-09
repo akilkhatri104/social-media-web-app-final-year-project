@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
 import { hashtag, media, post, postHashtag, like } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
-import { count, eq, inArray, sql, type InferSelectModel } from 'drizzle-orm';
+import { count, eq, inArray, sql, type InferSelectModel, and, not, isNull } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
 import {
   deleteFromCloudinary,
@@ -279,6 +279,44 @@ export async function getPostFromUser(req: Request, res: Response) {
       .json(new APIResponse('Posts fetched successfully', 200, resultPosts));
   } catch (error) {
     console.error('getPostFromUser :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}
+
+export async function getCommentsFromUser(req: Request, res: Response) {
+  try {
+    if (!req.params || !req.params['id']) {
+      throw new AppError('No user ID provided', 400);
+    }
+    const id = req.params['id'];
+    if (!id || typeof id !== 'string') {
+      throw new AppError('Invalid user ID provided', 400);
+    }
+    const fetchedComments = await db.query.post.findMany({
+      where: and(eq(post.userId, id), not(isNull(post.parentPostId))),
+      with: {
+        likes: true,
+        media: true,
+        author: true,
+        postHashtags: { with: { hashtag: true } },
+        comments: {
+          with: { media: true, likes: true, author: true, postHashtags: { with: { hashtag: true } } },
+        },
+      },
+    });
+    const resultComments = fetchedComments.map((comment) => ({
+      ...comment,
+      likeCount: comment.likes?.length ?? 0,
+      comments: comment.comments?.map((c) => ({
+        ...c,
+        likeCount: c.likes?.length ?? 0,
+      })) ?? [],
+    }));
+    return res
+      .status(200)
+      .json(new APIResponse('Comments fetched successfully', 200, resultComments));
+  } catch (error) {
+    console.error('getCommentsFromUser :: ', error);
     throw error instanceof AppError ? error : new AppError();
   }
 }

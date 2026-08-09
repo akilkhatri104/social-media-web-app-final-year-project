@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Card, CardContent } from "~/components/ui/card";
+import { Card, CardContent, CardFooter } from "~/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -249,8 +249,8 @@ const PostCard = ({ post }: Props) => {
   });
 
   return (
-    <Link to={`/post/${post.id}`}>
-      <Card className="border-0 rounded-none hover:bg-card/40 transition cursor-pointer block">
+    <Card className="border-0 rounded-none hover:bg-card/40 transition cursor-pointer block">
+      <Link to={`/post/${post.id}`}>
         <CardContent className="flex gap-4 p-4">
           {/* Avatar */}
           <span
@@ -417,105 +417,96 @@ const PostCard = ({ post }: Props) => {
             {(post.quotedPost || post.quotedPostId) && (
               <QuotedPostEmbed post={post.quotedPost} />
             )}
-
-            {/* Actions */}
-            <div className="flex justify-between p-2">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex items-center gap-2 text-muted-foreground"
-                  >
-                    <MessageCircle size={18} />
-                    {post?.commentCount ?? 0}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Post a reply</DialogTitle>
-                  </DialogHeader>
-                  <PostComposer parentPostId={post?.id} />
-                </DialogContent>
-              </Dialog>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={repostMutation.isPending}
-                    className={cn(
-                      "flex items-center text-muted-foreground gap-2",
-                      {
-                        "text-primary": !!repostStatus,
-                      },
-                    )}
-                  >
-                    <Repeat2 size={18} />
-                    {post.repostCount}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => repostMutation.mutate()}>
-                    <Repeat2 /> {!!repostStatus ? "Unrepost" : "Repost"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setRepostDialogOpen(true)}>
-                    <Pencil /> Quote Repost
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <Dialog
-                open={repostDialogOpen}
-                onOpenChange={setRepostDialogOpen}
-              >
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Post a quote repost</DialogTitle>
-                  </DialogHeader>
-                  <PostComposer quotedPostId={post?.id} />
-                </DialogContent>
-              </Dialog>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={likeMutation.isPending}
-                className="flex items-center gap-2 text-muted-foreground"
-                onClick={() => {
-                  likeMutation.mutate();
-                }}
-              >
-                <Heart size={18} fill={!!likeStatus ? "red" : undefined} />
-                {post.likeCount}
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={bookmarkMutation.isPending}
-                className={cn("flex items-center text-muted-foreground gap-2", {
-                  "text-primary": !!bookmarkStatus,
-                })}
-                onClick={() => {
-                  if (!isAuth) {
-                    toast.error("Please sign in to bookmark posts");
-                    return;
-                  }
-                  bookmarkMutation.mutate();
-                }}
-              >
-                <Bookmark
-                  size={18}
-                  fill={bookmarkStatus ? "currentColor" : "none"}
-                />
-              </Button>
-            </div>
           </div>
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+
+      {/* Actions */}
+      <CardFooter className="flex justify-between p-2">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-2 text-muted-foreground"
+            >
+              <MessageCircle size={18} />
+              {post?.commentCount ?? 0}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Post a reply</DialogTitle>
+            </DialogHeader>
+            <PostComposer parentPostId={post?.id} />
+          </DialogContent>
+        </Dialog>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={repostMutation.isPending}
+              className={cn("flex items-center text-muted-foreground gap-2", {
+                "text-primary": !!repostStatus,
+              })}
+            >
+              <Repeat2 size={18} />
+              {post.repostCount}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => repostMutation.mutate()}>
+              <Repeat2 /> {!!repostStatus ? "Unrepost" : "Repost"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setRepostDialogOpen(true)}>
+              <Pencil /> Quote Repost
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Dialog open={repostDialogOpen} onOpenChange={setRepostDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Post a quote repost</DialogTitle>
+            </DialogHeader>
+            <PostComposer quotedPostId={post?.id} />
+          </DialogContent>
+        </Dialog>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={likeMutation.isPending}
+          className="flex items-center gap-2 text-muted-foreground"
+          onClick={() => {
+            likeMutation.mutate();
+          }}
+        >
+          <Heart size={18} fill={!!likeStatus ? "red" : undefined} />
+          {post.likeCount}
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={bookmarkMutation.isPending}
+          className={cn("flex items-center text-muted-foreground gap-2", {
+            "text-primary": !!bookmarkStatus,
+          })}
+          onClick={() => {
+            if (!isAuth) {
+              toast.error("Please sign in to bookmark posts");
+              return;
+            }
+            bookmarkMutation.mutate();
+          }}
+        >
+          <Bookmark size={18} fill={bookmarkStatus ? "currentColor" : "none"} />
+        </Button>
+      </CardFooter>
+    </Card>
   );
 };
 

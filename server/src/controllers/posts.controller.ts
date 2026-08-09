@@ -217,6 +217,17 @@ export async function getPostByID(req: Request, res: Response) {
             author: true,
           },
         },
+        quotedPost: {
+          with: {
+            author: true,
+            likes: true,
+            media: true,
+            postHashtags: { with: { hashtag: true } },
+            comments: true,
+            reposts: true,
+            quotePosts: true,
+          }
+        },
       },
     });
 
@@ -261,6 +272,17 @@ export async function getPostFromUser(req: Request, res: Response) {
         postHashtags: { with: { hashtag: true } },
         comments: {
           with: { media: true, likes: true, author: true, postHashtags: { with: { hashtag: true } } },
+        },
+        quotedPost: {
+          with: {
+            author: true,
+            likes: true,
+            media: true,
+            postHashtags: { with: { hashtag: true } },
+            comments: true,
+            reposts: true,
+            quotePosts: true,
+          }
         },
       },
     });

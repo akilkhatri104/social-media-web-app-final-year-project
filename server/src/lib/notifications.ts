@@ -2,7 +2,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { db } from './db/client.ts';
 import { notification } from './db/schema.ts';
 
-type NotificationType = 'like' | 'comment' | 'repost' | 'follow' | 'quote';
+type NotificationType = 'like' | 'comment' | 'repost' | 'follow' | 'quote' | 'mention';
 
 export async function createNotificationOnce({
   recipientId,

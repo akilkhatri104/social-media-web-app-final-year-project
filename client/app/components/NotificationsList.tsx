@@ -53,6 +53,10 @@ export default function NotificationsList() {
                     <>
                       <strong>{n.actor?.name || n.actorId}</strong> started following you
                     </>
+                  ) : n.type === 'mention' ? (
+                    <>
+                      <strong>{n.actor?.name || n.actorId}</strong> mentioned you in a post
+                    </>
                   ) : (
                     <>
                       <strong>{n.actor?.name || n.actorId}</strong> {n.type} your post

@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
 import { hashtag, media, post, postHashtag, like } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
-import { count, eq, inArray, sql, type InferSelectModel, and, not, isNull } from 'drizzle-orm';
+import { count, eq, inArray, sql, type InferSelectModel, and, not, isNull, or } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
 import {
   deleteFromCloudinary,
@@ -10,7 +10,9 @@ import {
   uploadToCloudinary,
 } from '../lib/cloudinary.ts';
 import { extractHashtags } from '../lib/hashtags.ts';
+import { extractMentions } from '../lib/mentions.ts';
 import { createNotificationOnce } from '../lib/notifications.ts';
+import { user } from '../lib/auth-schema.ts';
 
 export async function createPost(req: Request, res: Response) {
   try {
@@ -54,6 +56,7 @@ export async function createPost(req: Request, res: Response) {
     }
 
     const hashtags = extractHashtags(content);
+    const mentions = extractMentions(content);
 
     const [createdPost] = await db
       .insert(post)
@@ -147,6 +150,29 @@ if (quoted) {
           })
           .onConflictDoNothing();
       }
+    }
+
+    if (mentions.length > 0) {
+      const mentionedUsers = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(
+          or(
+            inArray(sql`lower(${user.username})`, mentions),
+            inArray(sql`lower(${user.displayUsername})`, mentions),
+          ),
+        );
+
+      await Promise.all(
+        mentionedUsers.map((mentionedUser) =>
+          createNotificationOnce({
+            recipientId: mentionedUser.id,
+            actorId: userId,
+            type: 'mention',
+            postId: createdPost.postId,
+          }),
+        ),
+      );
     }
 
     if (!createdPost || !createdPost.postId) {

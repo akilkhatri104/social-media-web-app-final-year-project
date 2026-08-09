@@ -280,7 +280,7 @@ export const notification = p.pgTable('notification', {
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   type: p
-    .text('type', { enum: ['like', 'comment', 'repost', 'follow', 'quote'] })
+    .text('type', { enum: ['like', 'comment', 'repost', 'follow', 'quote', 'mention'] })
     .notNull(),
   postId: p.integer('post_id').references(() => post.id, { onDelete: 'set null' }),
   readAt: p.timestamp('read_at'),

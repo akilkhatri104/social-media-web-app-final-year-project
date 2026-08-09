@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
@@ -10,6 +10,7 @@ import { NavLink, useNavigate } from "react-router";
 import { toast } from "sonner";
 import axios from "axios";
 import { UserAvatar } from "./UserAvatar";
+import type { APIResponse, SearchUserResult } from "~/lib/types";
 
 type Props = {
     parentPostId?: number;
@@ -17,6 +18,13 @@ type Props = {
     id?: string,
     quotedPostId?: number
 };
+
+const ACTIVE_MENTION_PATTERN = /(^|\s)@([a-zA-Z0-9_]{0,30})$/;
+
+function getActiveMention(content: string) {
+    const match = content.match(ACTIVE_MENTION_PATTERN);
+    return match?.[2] ?? null;
+}
 
 export default function PostComposer({
     parentPostId,
@@ -29,6 +37,22 @@ export default function PostComposer({
     const [files, setFiles] = useState<File[]>([]);
     const { isAuth, isInitialLoading, data } = useMe()
     const navigate = useNavigate()
+    const activeMention = getActiveMention(content);
+
+    const { data: mentionUsers = [] } = useQuery({
+        queryKey: queryKeys.explore.search(activeMention ? `mention:${activeMention}` : "mention:"),
+        queryFn: async () => {
+            const res = await api.get<APIResponse>("/api/explore/search", {
+                params: { q: activeMention, limit: 5 },
+            });
+            return (res.data.data?.users ?? []) as SearchUserResult[];
+        },
+        enabled: activeMention !== null && activeMention.length > 0,
+    });
+
+    const insertMention = (handle: string) => {
+        setContent((current) => current.replace(ACTIVE_MENTION_PATTERN, `$1@${handle} `));
+    };
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -104,6 +128,37 @@ export default function PostComposer({
                     onChange={(e) => setContent(e.target.value)}
                     className="resize-none border-none focus-visible:ring-0 text-lg"
                 />
+
+                {activeMention !== null && mentionUsers.length > 0 && (
+                    <div className="overflow-hidden rounded-xl border bg-popover shadow-sm">
+                        {mentionUsers.map((user) => {
+                            const handle = user.displayUsername ?? user.username;
+
+                            if (!handle) return null;
+
+                            return (
+                                <button
+                                    key={user.id}
+                                    type="button"
+                                    className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-accent"
+                                    onClick={() => insertMention(handle)}
+                                >
+                                    <UserAvatar
+                                        image={user.image}
+                                        name={user.name}
+                                        username={user.username}
+                                        displayUsername={user.displayUsername}
+                                        className="h-8 w-8"
+                                    />
+                                    <span className="min-w-0">
+                                        <span className="block truncate font-medium">{user.name}</span>
+                                        <span className="block truncate text-xs text-muted-foreground">@{handle}</span>
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* Media Preview */}
                 {files.length > 0 && (

@@ -1,20 +1,24 @@
 import { Link } from "react-router";
 
-const HASHTAG_PATTERN = /#([a-zA-Z0-9_]{1,50})/g;
+const LINKABLE_TEXT_PATTERN = /([#@])([a-zA-Z0-9_]{1,50})/g;
 
 export function LinkifiedText({ content }: { content: string }) {
-  const segments: Array<{ type: "text" | "tag"; value: string }> = [];
+  const segments: Array<{ type: "text" | "tag" | "mention"; value: string }> = [];
   let lastIndex = 0;
 
-  for (const match of content.matchAll(HASHTAG_PATTERN)) {
+  for (const match of content.matchAll(LINKABLE_TEXT_PATTERN)) {
     const start = match.index ?? 0;
-    const tag = match[1];
+    const marker = match[1];
+    const value = match[2];
 
     if (start > lastIndex) {
       segments.push({ type: "text", value: content.slice(lastIndex, start) });
     }
 
-    segments.push({ type: "tag", value: tag.toLowerCase() });
+    segments.push({
+      type: marker === "#" ? "tag" : "mention",
+      value: value.toLowerCase(),
+    });
     lastIndex = start + match[0].length;
   }
 
@@ -36,6 +40,14 @@ export function LinkifiedText({ content }: { content: string }) {
             className="font-medium text-primary hover:underline"
           >
             #{segment.value}
+          </Link>
+        ) : segment.type === "mention" ? (
+          <Link
+            key={`${segment.type}-${segment.value}-${index}`}
+            to={`/@${segment.value}`}
+            className="font-medium text-primary hover:underline"
+          >
+            @{segment.value}
           </Link>
         ) : (
           <span key={`${segment.type}-${index}`}>{segment.value}</span>

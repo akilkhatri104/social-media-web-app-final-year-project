@@ -5,6 +5,7 @@ import { notification, notificationPreference, post } from './db/schema.ts';
 import mailSender from './mailSender.ts';
 
 type NotificationType = 'like' | 'comment' | 'repost' | 'follow' | 'quote' | 'mention';
+const frontendURL = process.env.FRONTEND_URL;
 
 const defaultNotificationPreferences = {
   inAppLikes: true,
@@ -57,6 +58,28 @@ function getNotificationCopy(type: NotificationType) {
   }
 }
 
+function buildNotificationUrl({
+  type,
+  postId,
+  actorUsername,
+}: {
+  type: NotificationType;
+  postId?: number;
+  actorUsername?: string | null;
+}) {
+  if (!frontendURL) return null;
+
+  if (type === 'follow' && actorUsername) {
+    return `${frontendURL}/@${actorUsername}`;
+  }
+
+  if (postId) {
+    return `${frontendURL}/post/${postId}`;
+  }
+
+  return `${frontendURL}/notifications`;
+}
+
 async function sendNotificationEmail({
   recipientId,
   actorId,
@@ -89,9 +112,18 @@ async function sendNotificationEmail({
 
   const copy = getNotificationCopy(type);
   const actorName = actor.name || actor.displayUsername || actor.username || 'Someone';
+  const actorUsername = actor.displayUsername || actor.username;
+  const notificationUrl = buildNotificationUrl({
+    type,
+    actorUsername,
+    ...(postId ? { postId } : {}),
+  });
   const postPreview = relatedPost?.content
     ? `<p style="margin-top:16px;color:#666;">"${relatedPost.content.slice(0, 140)}${relatedPost.content.length > 140 ? '...' : ''}"</p>`
     : '';
+  const actionLink = notificationUrl
+    ? `<p style="margin-top:16px;"><a href="${notificationUrl}">Check on app/website</a></p>`
+    : '<p style="margin-top:16px;">Open the app to view the full activity.</p>';
 
   await mailSender(
     recipient.email,
@@ -100,7 +132,7 @@ async function sendNotificationEmail({
       <p>Hi ${recipient.name || 'there'},</p>
       <p><strong>${actorName}</strong> ${copy.action}.</p>
       ${postPreview}
-      <p style="margin-top:16px;">Open the app to view the full activity.</p>
+      ${actionLink}
     `,
   );
 }

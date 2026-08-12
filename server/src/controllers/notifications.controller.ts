@@ -3,7 +3,7 @@ import { AppError } from '../middlewares/errorHandler.ts';
 import { db } from '../lib/db/client.ts';
 import { notification } from '../lib/db/schema.ts';
 import { APIResponse } from '../lib/apiResponse.ts';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, count, isNull } from 'drizzle-orm';
 
 export async function getNotifications(req: Request, res: Response) {
   try {
@@ -34,6 +34,33 @@ export async function getNotifications(req: Request, res: Response) {
       .json(new APIResponse('Notifications fetched', 200, { notifications }));
   } catch (error) {
     console.error('getNotifications :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}
+
+export async function getUnreadNotificationCount(req: Request, res: Response) {
+  try {
+    if (!req.session) {
+      throw new AppError('User needs to be logged in to fetch notifications', 401);
+    }
+
+    const [result] = await db
+      .select({ count: count() })
+      .from(notification)
+      .where(
+        and(
+          eq(notification.recipientId, req.session.user.id),
+          isNull(notification.readAt),
+        ),
+      );
+
+    return res.status(200).json(
+      new APIResponse('Unread notifications fetched', 200, {
+        unreadCount: result?.count ?? 0,
+      }),
+    );
+  } catch (error) {
+    console.error('getUnreadNotificationCount :: ', error);
     throw error instanceof AppError ? error : new AppError();
   }
 }

@@ -24,21 +24,34 @@ import {
   User2,
   MessageSquare,
   Bell,
-  Settings2,
   Settings2Icon,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router";
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useMe } from "~/hooks/useMe";
 import { Spinner } from "./ui/spinner";
 import PostComposer from "./PostComposer";
 import { Button } from "~/components/ui/button";
 import LogoutButton from "./LogoutButton";
 import { ModeToggle } from "./mode-toggle";
+import { api } from "~/lib/axios";
+import { queryKeys } from "~/lib/react-query";
+import type { APIResponse } from "~/lib/types";
 
 export function AppSidebar() {
   const location = useLocation();
   const { isInitialLoading, isAuth, data: user } = useMe();
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: queryKeys.notifications.unreadCount,
+    queryFn: async () => {
+      const res = await api.get<APIResponse>("/api/notifications/unread-count");
+      return Number(res.data.data?.unreadCount || 0);
+    },
+    enabled: isAuth,
+    refetchInterval: 5000,
+  });
+
   const sidebarItems = [
     {
       icon: <HomeIcon />,
@@ -54,6 +67,7 @@ export function AppSidebar() {
       icon: <Bell />,
       name: "Notifications",
       to: "/notifications",
+      badge: unreadCount > 0 ? (unreadCount > 99 ? "99+" : String(unreadCount)) : null,
     },
     {
       icon: <BookmarkIcon />,
@@ -100,15 +114,20 @@ export function AppSidebar() {
               }
             >
               {({ isActive }) => (
-                <>
+                <div className="flex w-full items-center gap-2">
                   {/* Clone icon to control color */}
                   {React.cloneElement(item.icon, {
                     className: isActive
                       ? "text-white"
                       : "text-muted-foreground",
                   })}
-                  <p className="ml-2">{item.name}</p>
-                </>
+                  <p>{item.name}</p>
+                  {item.badge ? (
+                    <span className={`ml-auto inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${isActive ? "bg-white/20 text-white" : "bg-primary text-primary-foreground"}`}>
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </div>
               )}
             </NavLink>
           ))}

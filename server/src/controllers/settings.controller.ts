@@ -4,8 +4,29 @@ import { APIResponse } from '../lib/apiResponse.ts';
 import { auth } from '../lib/auth.ts';
 import { db } from '../lib/db/client.ts';
 import { session } from '../lib/auth-schema.ts';
+import { notificationPreference } from '../lib/db/schema.ts';
 import { and, eq, ne } from 'drizzle-orm';
 import { APIError } from 'better-auth';
+
+const defaultNotificationSettings = {
+  inAppLikes: true,
+  inAppComments: true,
+  inAppReposts: true,
+  inAppFollows: true,
+  inAppQuotes: true,
+  inAppMentions: true,
+  emailEnabled: false,
+  emailLikes: false,
+  emailComments: true,
+  emailReposts: false,
+  emailFollows: true,
+  emailQuotes: true,
+  emailMentions: true,
+};
+
+const notificationSettingKeys = Object.keys(defaultNotificationSettings) as Array<
+  keyof typeof defaultNotificationSettings
+>;
 
 export async function getSessions(req: Request, res: Response) {
   if (!req.session) throw new AppError('Unauthorized', 401);
@@ -142,4 +163,70 @@ export async function changePassword(req: Request, res: Response) {
       ? error
       : new AppError();
   }
+}
+
+export async function getNotificationSettings(req: Request, res: Response) {
+  if (!req.session) throw new AppError('Unauthorized', 401);
+
+  const settings = await db.query.notificationPreference.findFirst({
+    where: eq(notificationPreference.userId, req.session.user.id),
+  });
+
+  return res.json(
+    new APIResponse('Notification settings fetched successfully', 200, {
+      settings: settings
+        ? {
+            inAppLikes: settings.inAppLikes,
+            inAppComments: settings.inAppComments,
+            inAppReposts: settings.inAppReposts,
+            inAppFollows: settings.inAppFollows,
+            inAppQuotes: settings.inAppQuotes,
+            inAppMentions: settings.inAppMentions,
+            emailEnabled: settings.emailEnabled,
+            emailLikes: settings.emailLikes,
+            emailComments: settings.emailComments,
+            emailReposts: settings.emailReposts,
+            emailFollows: settings.emailFollows,
+            emailQuotes: settings.emailQuotes,
+            emailMentions: settings.emailMentions,
+          }
+        : defaultNotificationSettings,
+    }),
+  );
+}
+
+export async function updateNotificationSettings(req: Request, res: Response) {
+  if (!req.session) throw new AppError('Unauthorized', 401);
+
+  const updates = Object.fromEntries(
+    notificationSettingKeys
+      .filter((key) => typeof req.body?.[key] === 'boolean')
+      .map((key) => [key, req.body[key]]),
+  );
+
+  if (Object.keys(updates).length === 0) {
+    throw new AppError('At least one valid notification setting is required', 400);
+  }
+
+  await db
+    .insert(notificationPreference)
+    .values({
+      userId: req.session.user.id,
+      ...defaultNotificationSettings,
+      ...updates,
+    })
+    .onConflictDoUpdate({
+      target: notificationPreference.userId,
+      set: updates,
+    });
+
+  const settings = await db.query.notificationPreference.findFirst({
+    where: eq(notificationPreference.userId, req.session.user.id),
+  });
+
+  return res.json(
+    new APIResponse('Notification settings updated successfully', 200, {
+      settings,
+    }),
+  );
 }

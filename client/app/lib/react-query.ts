@@ -40,6 +40,7 @@ export const queryKeys = {
     },
     notifications: {
         all: ["notifications"] as const,
+        unreadCount: ["notifications", "unread-count"] as const,
     },
     repost: {
         status: (id?: string | number) => ["repost", "status", id] as const,
@@ -50,5 +51,6 @@ export const queryKeys = {
     },
     settings: {
         sessions: ["settings", "sessions"] as const,
+        notifications: ["settings", "notifications"] as const,
     },
 };

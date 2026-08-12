@@ -291,6 +291,31 @@ export const notification = p.pgTable('notification', {
     .notNull(),
 });
 
+export const notificationPreference = p.pgTable('notification_preference', {
+  userId: p
+    .text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  inAppLikes: p.boolean('in_app_likes').notNull().default(true),
+  inAppComments: p.boolean('in_app_comments').notNull().default(true),
+  inAppReposts: p.boolean('in_app_reposts').notNull().default(true),
+  inAppFollows: p.boolean('in_app_follows').notNull().default(true),
+  inAppQuotes: p.boolean('in_app_quotes').notNull().default(true),
+  inAppMentions: p.boolean('in_app_mentions').notNull().default(true),
+  emailEnabled: p.boolean('email_enabled').notNull().default(false),
+  emailLikes: p.boolean('email_likes').notNull().default(false),
+  emailComments: p.boolean('email_comments').notNull().default(true),
+  emailReposts: p.boolean('email_reposts').notNull().default(false),
+  emailFollows: p.boolean('email_follows').notNull().default(true),
+  emailQuotes: p.boolean('email_quotes').notNull().default(true),
+  emailMentions: p.boolean('email_mentions').notNull().default(true),
+  createdAt: p.timestamp('created_at').defaultNow().notNull(),
+  updatedAt: p
+    .timestamp('updated_at')
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
 export const notificationRelations = relations(notification, ({ one }) => ({
   recipient: one(user, {
     fields: [notification.recipientId],
@@ -305,4 +330,14 @@ export const notificationRelations = relations(notification, ({ one }) => ({
     references: [post.id],
   }),
 }));
+
+export const notificationPreferenceRelations = relations(
+  notificationPreference,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [notificationPreference.userId],
+      references: [user.id],
+    }),
+  }),
+);
 

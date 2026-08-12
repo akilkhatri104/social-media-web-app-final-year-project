@@ -1,14 +1,15 @@
 import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
-import { queryClient, queryKeys } from "~/lib/react-query";
-import type { APIResponse } from "~/lib/types";
+import { queryKeys } from "~/lib/react-query";
+import type { APIResponse, NotificationDto } from "~/lib/types";
 import { Button } from "~/components/ui/button";
 import { LoadingState } from "~/components/ui/spinner";
 
 export default function NotificationsList() {
+  const queryClient = useQueryClient();
 
-  const { data: notifications = [], isLoading } = useQuery({
+  const { data: notifications = [], isLoading } = useQuery<NotificationDto[]>({
     queryKey: queryKeys.notifications.all,
     queryFn: async () => {
       const res = await api.get<APIResponse>(`/api/notifications`);
@@ -22,7 +23,10 @@ export default function NotificationsList() {
       const res = await api.patch<APIResponse>(`/api/notifications/read-all`);
       return res.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.unreadCount });
+    },
   });
 
   const markOne = useMutation({
@@ -30,7 +34,10 @@ export default function NotificationsList() {
       const res = await api.patch<APIResponse>(`/api/notifications/read/${id}`);
       return res.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.unreadCount });
+    },
   });
 
   if (isLoading) return <LoadingState label="Loading notifications..." variant="section" />;
@@ -45,7 +52,7 @@ export default function NotificationsList() {
       </div>
       <div className="space-y-2">
         {notifications.length === 0 && <div className="text-sm text-muted-foreground">No notifications</div>}
-        {notifications.map((n: any) => (
+        {notifications.map((n) => (
           <div key={n.id} className={`p-3 rounded-lg border ${n.readAt ? 'bg-card' : 'bg-primary/5'}`}>
             <div className="flex items-center justify-between">
               <div>
@@ -70,7 +77,7 @@ export default function NotificationsList() {
                 {!n.readAt && (
                   <Button size="sm" onClick={() => markOne.mutate(n.id)} disabled={markOne.isPending}>Mark read</Button>
                 )}
-                <Button variant="ghost" size="sm" onClick={async () => { await api.delete(`/api/notifications/${n.id}`); queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }); }}>Delete</Button>
+                <Button variant="ghost" size="sm" onClick={async () => { await api.delete(`/api/notifications/${n.id}`); queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }); queryClient.invalidateQueries({ queryKey: queryKeys.notifications.unreadCount }); }}>Delete</Button>
               </div>
             </div>
           </div>

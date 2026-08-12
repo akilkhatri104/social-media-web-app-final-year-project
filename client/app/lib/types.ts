@@ -5,6 +5,51 @@ export type APIResponse = {
     success: boolean;
 };
 
+export type NotificationType =
+    | "like"
+    | "comment"
+    | "repost"
+    | "follow"
+    | "quote"
+    | "mention";
+
+export type NotificationSettingsDto = {
+    inAppLikes: boolean;
+    inAppComments: boolean;
+    inAppReposts: boolean;
+    inAppFollows: boolean;
+    inAppQuotes: boolean;
+    inAppMentions: boolean;
+    emailEnabled: boolean;
+    emailLikes: boolean;
+    emailComments: boolean;
+    emailReposts: boolean;
+    emailFollows: boolean;
+    emailQuotes: boolean;
+    emailMentions: boolean;
+};
+
+export type NotificationDto = {
+    id: number;
+    recipientId: string;
+    actorId: string;
+    type: NotificationType;
+    postId: number | null;
+    readAt: string | null;
+    createdAt: string;
+    actor?: {
+        id: string;
+        name: string | null;
+        username: string | null;
+        displayUsername: string | null;
+        image: string | null;
+    };
+    post?: {
+        id: number;
+        content: string;
+    } | null;
+};
+
 export type PostDto = {
     id: number;
     userId: string;

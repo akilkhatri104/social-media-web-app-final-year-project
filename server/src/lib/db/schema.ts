@@ -302,7 +302,7 @@ export const notificationPreference = p.pgTable('notification_preference', {
   inAppFollows: p.boolean('in_app_follows').notNull().default(true),
   inAppQuotes: p.boolean('in_app_quotes').notNull().default(true),
   inAppMentions: p.boolean('in_app_mentions').notNull().default(true),
-  emailEnabled: p.boolean('email_enabled').notNull().default(false),
+  emailEnabled: p.boolean('email_enabled').notNull().default(true),
   emailLikes: p.boolean('email_likes').notNull().default(false),
   emailComments: p.boolean('email_comments').notNull().default(true),
   emailReposts: p.boolean('email_reposts').notNull().default(false),

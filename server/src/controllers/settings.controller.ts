@@ -15,7 +15,7 @@ const defaultNotificationSettings = {
   inAppFollows: true,
   inAppQuotes: true,
   inAppMentions: true,
-  emailEnabled: false,
+  emailEnabled: true,
   emailLikes: false,
   emailComments: true,
   emailReposts: false,

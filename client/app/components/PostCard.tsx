@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Card, CardContent, CardFooter } from "~/components/ui/card";
 import {
   DropdownMenu,
@@ -52,7 +52,7 @@ import { queryClient, queryKeys } from "~/lib/react-query";
 import type { APIResponse } from "~/lib/types";
 import { toast } from "sonner";
 import axios from "axios";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { useMe } from "~/hooks/useMe";
 import PostComposer from "./PostComposer";
 import FollowButton from "./FollowButton";
@@ -120,6 +120,7 @@ const updateCachedPost = (
 };
 
 const PostCard = ({ post }: Props) => {
+  const navigate = useNavigate();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeletedDialogOpen] = useState(false);
   const [repostDialogOpen, setRepostDialogOpen] = useState(false);
@@ -128,6 +129,20 @@ const PostCard = ({ post }: Props) => {
 
   const author = post?.author;
   const parentAuthor = post?.parentPost?.author;
+
+  const handlePostClick = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+
+    if (
+      target.closest(
+        'a, button, input, textarea, select, label, video, [role="button"], [data-no-post-link="true"]',
+      )
+    ) {
+      return;
+    }
+
+    navigate(`/post/${post.id}`);
+  };
 
   const shareAction = () => {
     navigator.clipboard.writeText(
@@ -364,15 +379,13 @@ const PostCard = ({ post }: Props) => {
   });
 
   return (
-    <Card className="border-0 rounded-none hover:bg-card/40 transition cursor-pointer block">
-      <Link to={`/post/${post.id}`}>
-        <CardContent className="flex gap-4 p-4">
+    <Card
+      className="border-0 rounded-none hover:bg-card/40 transition cursor-pointer block"
+      onClick={handlePostClick}
+    >
+      <CardContent className="flex gap-4 p-4">
           {/* Avatar */}
-          <span
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-          >
+          <span>
             <Link
               to={`/@${author?.displayUsername}`}
               onClick={(e) => e.stopPropagation()}
@@ -421,7 +434,10 @@ const PostCard = ({ post }: Props) => {
               </div>
 
               {/* Follow + Dropdown */}
-              <div className="flex justify-center items-center">
+              <div
+                className="flex justify-center items-center"
+                data-no-post-link="true"
+              >
                 <FollowButton userId={post.author.id} />
 
                 <DropdownMenu>
@@ -533,8 +549,7 @@ const PostCard = ({ post }: Props) => {
               <QuotedPostEmbed post={post.quotedPost} />
             )}
           </div>
-        </CardContent>
-      </Link>
+      </CardContent>
 
       {/* Actions */}
       <CardFooter

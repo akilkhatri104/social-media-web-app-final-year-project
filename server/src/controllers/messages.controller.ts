@@ -8,7 +8,7 @@ import { eq, or, and, desc, asc } from 'drizzle-orm';
 
 export async function sendMessage(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User not logged in', 401);
     }
     const senderId = req.session.user.id;
@@ -73,7 +73,7 @@ export async function sendMessage(req: Request, res: Response) {
 
 export async function getConversations(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User not logged in', 401);
     }
     const myId = req.session.user.id;
@@ -127,7 +127,7 @@ export async function getConversations(req: Request, res: Response) {
 
 export async function getChatHistory(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User not logged in', 401);
     }
     const myId = req.session.user.id;

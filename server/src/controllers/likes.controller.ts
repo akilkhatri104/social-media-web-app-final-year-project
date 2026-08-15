@@ -8,7 +8,7 @@ import { createNotificationOnce } from '../lib/notifications.ts';
 
 export async function toggleLike(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to like a post', 401);
     }
 
@@ -164,7 +164,7 @@ export async function getLikedPostsFromUser(req: Request, res: Response) {
 
 export async function getLikeStatusByPostId(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError(
         'User needs to be logged in to access their like status',
         401,

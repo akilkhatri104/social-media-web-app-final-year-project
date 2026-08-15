@@ -9,7 +9,7 @@ import { createNotificationOnce } from '../lib/notifications.ts';
 
 export async function toggleFollow(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to follow user', 401);
     }
 
@@ -232,7 +232,7 @@ export async function getFollowingByUserId(req: Request, res: Response) {
 
 export async function getFollowStatusByUserId(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError(
         'User needs to be logged in to check follow status',
         401,

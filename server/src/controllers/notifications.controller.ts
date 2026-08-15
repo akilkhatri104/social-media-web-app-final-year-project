@@ -7,7 +7,7 @@ import { eq, and, desc, count, isNull } from 'drizzle-orm';
 
 export async function getNotifications(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to fetch notifications', 401);
     }
 
@@ -40,7 +40,7 @@ export async function getNotifications(req: Request, res: Response) {
 
 export async function getUnreadNotificationCount(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to fetch notifications', 401);
     }
 
@@ -67,7 +67,7 @@ export async function getUnreadNotificationCount(req: Request, res: Response) {
 
 export async function markAsRead(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to mark notifications', 401);
     }
 
@@ -95,7 +95,7 @@ export async function markAsRead(req: Request, res: Response) {
 
 export async function markAllAsRead(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to mark notifications', 401);
     }
 
@@ -118,7 +118,7 @@ export async function markAllAsRead(req: Request, res: Response) {
 
 export async function deleteNotification(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to delete notification', 401);
     }
 

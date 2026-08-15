@@ -8,7 +8,7 @@ import { createNotificationOnce } from '../lib/notifications.ts';
 
 export async function toggleRepost(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to toggle reposts.', 401);
     }
 
@@ -89,7 +89,7 @@ export async function toggleRepost(req: Request, res: Response) {
 
 export async function getRepostStatus(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError(
         'User needs to be logged in to get repost status.',
         401,

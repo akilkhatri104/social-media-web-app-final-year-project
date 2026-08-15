@@ -23,7 +23,7 @@ export async function verifyAuth(
       headers: req.headers,
     });
 
-    if (!session) {
+    if (!session || !session.user || !session.session) {
       throw new AppError(
         'User needs to be logged in to access this resource',
         401,

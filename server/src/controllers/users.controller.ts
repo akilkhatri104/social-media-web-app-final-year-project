@@ -9,8 +9,8 @@ import { eq, and, not, or, ilike } from 'drizzle-orm';
 import { APIError } from 'better-auth';
 
 export async function me(req: Request, res: Response) {
-  if (!req.session) {
-    throw new AppError('User not logged in', 400);
+  if (!req.session?.user) {
+    throw new AppError('User not logged in', 401);
   }
 
   const currentUser = await db.query.user.findFirst({
@@ -185,8 +185,8 @@ export async function logout(req: Request, res: Response) {
 
 export async function updateUser(req: Request, res: Response) {
   try {
-    if (!req.session) {
-      throw new AppError('User needs to be logged in to update details', 400);
+    if (!req.session?.user) {
+      throw new AppError('User needs to be logged in to update details', 401);
     }
 
     if (!req.body) {
@@ -263,7 +263,7 @@ export async function updateUser(req: Request, res: Response) {
 
 export async function sendEmailVerificationOTP(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to verify email', 401);
     }
 
@@ -303,7 +303,7 @@ export async function verifyEmailVerificationOTP(req: Request, res: Response) {
     if (!otp || otp.length !== 6) {
       throw new AppError('No or invalid OTP provided', 400);
     }
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to verify email', 401);
     }
 
@@ -449,7 +449,7 @@ export async function verifyForgetPasswordOTP(req: Request, res: Response) {
 
 export async function searchUsers(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to perform search', 401);
     }
     const myId = req.session.user.id;

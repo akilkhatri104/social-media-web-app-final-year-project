@@ -241,7 +241,7 @@ async function getViewerFeedContext(userId: string): Promise<ViewerFeedContext> 
 
 export async function getFollowingFeed(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in access Following Feed');
     }
 
@@ -301,12 +301,16 @@ export async function getSimpleForYouFeed(req: Request, res: Response) {
       headers: req.headers,
     });
 
+    if (!session?.user) {
+      throw new AppError('User needs to be logged in to access feed', 401);
+    }
+
     req.session = session;
 
     const viewerContext = session
       ? await getViewerFeedContext(session.user.id)
       : null;
-    const viewerId = session?.user.id ?? null;
+    const viewerId = session.user.id;
 
     const candidatePosts = await db.query.post.findMany({
       where: isNull(post.parentPostId),

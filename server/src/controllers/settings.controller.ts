@@ -29,7 +29,7 @@ const notificationSettingKeys = Object.keys(defaultNotificationSettings) as Arra
 >;
 
 export async function getSessions(req: Request, res: Response) {
-  if (!req.session) throw new AppError('Unauthorized', 401);
+  if (!req.session?.user) throw new AppError('Unauthorized', 401);
 
   const userId = req.session.user.id;
   const currentSessionId = req.session.session.id;
@@ -48,7 +48,7 @@ export async function getSessions(req: Request, res: Response) {
 }
 
 export async function deleteSession(req: Request, res: Response) {
-  if (!req.session) throw new AppError('Unauthorized', 401);
+  if (!req.session?.user) throw new AppError('Unauthorized', 401);
 
   const userId = req.session.user.id;
   const sessionId = req.params.id;
@@ -75,7 +75,7 @@ export async function deleteSession(req: Request, res: Response) {
 }
 
 export async function deleteOtherSessions(req: Request, res: Response) {
-  if (!req.session) throw new AppError('Unauthorized', 401);
+  if (!req.session?.user) throw new AppError('Unauthorized', 401);
 
   const userId = req.session.user.id;
   const currentSessionId = req.session.session.id;
@@ -103,7 +103,7 @@ export async function deleteOtherSessionsDirect(
   req: Request,
   res: Response,
 ) {
-  if (!req.session) throw new AppError('Unauthorized', 401);
+  if (!req.session?.user) throw new AppError('Unauthorized', 401);
 
   const userId = req.session.user.id;
   const currentSessionId = req.session.session.id;
@@ -118,7 +118,7 @@ export async function deleteOtherSessionsDirect(
 }
 
 export async function deleteAccount(req: Request, res: Response) {
-  if (!req.session) throw new AppError('Unauthorized', 401);
+  if (!req.session?.user) throw new AppError('Unauthorized', 401);
 
   try {
     const { password } = req.body;
@@ -139,7 +139,7 @@ export async function deleteAccount(req: Request, res: Response) {
 }
 
 export async function changePassword(req: Request, res: Response) {
-  if (!req.session) throw new AppError('Unauthorized', 401);
+  if (!req.session?.user) throw new AppError('Unauthorized', 401);
 
   try {
     const { currentPassword, newPassword } = req.body;
@@ -166,7 +166,7 @@ export async function changePassword(req: Request, res: Response) {
 }
 
 export async function getNotificationSettings(req: Request, res: Response) {
-  if (!req.session) throw new AppError('Unauthorized', 401);
+  if (!req.session?.user) throw new AppError('Unauthorized', 401);
 
   const settings = await db.query.notificationPreference.findFirst({
     where: eq(notificationPreference.userId, req.session.user.id),
@@ -196,7 +196,7 @@ export async function getNotificationSettings(req: Request, res: Response) {
 }
 
 export async function updateNotificationSettings(req: Request, res: Response) {
-  if (!req.session) throw new AppError('Unauthorized', 401);
+  if (!req.session?.user) throw new AppError('Unauthorized', 401);
 
   const updates = Object.fromEntries(
     notificationSettingKeys

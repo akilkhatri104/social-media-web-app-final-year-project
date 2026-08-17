@@ -127,6 +127,12 @@ export default function PostComposer({
                     placeholder={placeholder}
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" && e.shiftKey && content && !mutation.isPending) {
+                            e.preventDefault();
+                            mutation.mutate();
+                        }
+                    }}
                     className="resize-none border-none focus-visible:ring-0 text-lg"
                 />
 

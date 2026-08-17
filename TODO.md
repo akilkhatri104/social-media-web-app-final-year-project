@@ -43,4 +43,4 @@
 - [-] Regularly run and act upon `npm audit --production` in both client and server.
   - Schedule for every release; address high and critical external dependencies.
 
-- [ ] Add missing test coverage for new/core flows. (Review current test folder status!)
+- [x] Add missing test coverage for new/core flows. (Review current test folder status!)

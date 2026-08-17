@@ -1,101 +1,46 @@
-1. Refactor feed post loading
+# TODOs: Social-Media Web App – Bugs & Issue Remediation
 
-- Add a postWithFeedRelations() helper in server/src/controllers/feed.controller.ts.
-- Replace duplicated with: { ... } relation blocks in Following and For You queries.
-- Keep DTO output shape unchanged.
+## HIGH PRIORITY
 
-2. Add optional session support for For You
+- [ ] Enforce consistent session checks on **every protected backend controller** (e.g., bookmarks, reposts, notifications, follows, discovery, etc.).
+  - Add early `if (!req.session || !req.session.user)` guards and return 401 everywhere sensitive userId is accessed.
+  - Audit all controllers for missing/fragile session checks.
 
-- Import auth into feed.controller.ts.
-- Inside getSimpleForYouFeed, call auth.api.getSession({ headers: req.headers }).
-- Treat missing session as guest mode, not an error.
-- Keep /api/feed/for-you public in feed.router.ts.
+- [ ] Update all backend entrypoints to reliably return **401/403 on unauthorized access**, not 200 with empty or ambiguous responses.
 
-3. Fetch viewer context for logged-in users
+- [ ] Audit and lock down CORS configuration in `server/src/index.ts`:
+  - Only allow specific, hard-coded frontend origins (dev and prod).
+  - Make sure `credentials: true` cookies are only sent to the allowed origin.
+  - Add logging or errors if the environment misconfigures the allowed origin.
 
-- Load IDs of users the viewer follows.
-- Load posts the viewer liked.
-- Load posts the viewer bookmarked.
-- Load posts the viewer reposted.
-- Load comments/replies created by the viewer.
-- Load posts created by the viewer.
-- Build sets for:
-- followedUserIds
-- interactedPostIds
-- interactedAuthorIds
-- interestedHashtags
+- [ ] Reduce query cache times for all notification, count, and live-update queries on the frontend (e.g., `unreadCount`, `useMe`, timeline/feed, etc.):
+  - Replace `staleTime: Infinity` with something sensible (e.g., 10s-60s).
+  - Ensure user sees up-to-date data after interactions or tab changes.
 
-4. Fetch candidate posts
+- [-] Add or fix cleanup for **all component event listeners** on the frontend:
+  - For every `addEventListener`, ensure a corresponding `removeEventListener` in the `useEffect` cleanup function.
 
-- Query recent top-level posts with parentPostId IS NULL.
-- Include author, likes, comments, reposts, quotePosts, media, postHashtags, quotedPost, and parentPost.
-- Start with a reasonable limit, for example 200.
-- Order by createdAt DESC before scoring.
+## MEDIUM PRIORITY
 
-5. Apply visibility filtering
+- [-] Replace all backend code using `process.env.*!` (non-null assertions) with robust runtime validation at startup:
+  - If any critical env var is missing, log a clear error and fail fast.
 
-- Always allow public posts.
-- Allow the viewer’s own posts.
-- Allow followers posts only when post.userId is in followedUserIds.
-- For guests, only allow public posts.
+- [ ] Add basic express rate-limiting (e.g., on login/signup/discovery/feed endpoints) to reduce spam, brute force, and abuse risk.
 
-6. Score each candidate post
+- [ ] Improve error boundary handling:
+  - Ensure any thrown error does NOT leak stack traces or internal details to users.
+  - Prefer custom, user-friendly error messages, especially for auth/database/config issues.
 
-- Calculate post age in hours.
-- Add recency score:
-  Math.max(0, 72 - ageHours)
-- Add engagement score:
-  likeCount _ 2 + commentCount _ 3 + repostCount \* 2
-- For logged-in users, add personalization boosts:
-  +25 if author is followed
-  +18 if author is an interacted author
-  +12 per matching hashtag, capped at 36
-  +8 if followed users engaged with the post
-  -10 if viewer owns the post
-  -15 if viewer already interacted with the post
+## LOW PRIORITY
 
-7. Sort and limit results
+- [ ] Add handling for SSR quirks and multi-tab session behavior on the frontend:
+  - Make sure session/localStorage data syncs reliably (e.g., on logout in another tab).
+  - Sanitize/fallback logic for corrupted or missing local/sessionStorage entries.
 
-- Sort scored posts by score DESC.
-- Use createdAt DESC as the tie breaker.
-- Limit final output to a practical amount, for example 50.
+- [ ] Create explicit “error” and “pending” UI screens for each user data fetching route.
+  - All places using `useQuery`, etc., should clearly differentiate empty/error/loading.
 
-8. Return the existing feed format
+- [ ] Regularly run and act upon `npm audit --production` in both client and server.
+  - Schedule for every release; address high and critical external dependencies.
 
-- Map each result to:
-  {
-  itemType: 'post',
-  createdAt: post.createdAt,
-  post: toPostDto(post)
-  }
-- Do not expose scores in the API response for now.
-- Keep client FeedItem types unchanged.
-
-9. Decide how to handle reposts
-
-- Simple first version: keep For You focused on original posts only.
-- Optional follow-up: include repost items and score them using the original post plus reposting user context.
-- Keep Following feed repost behavior unchanged.
-
-10. Verify server correctness
-
-- Run npm run build in server.
-- Run npm run lint in server if build succeeds.
-- Fix any TypeScript or lint issues.
-
-11. Manual test cases
-
-- Guest user can load For You.
-- Logged-in user can load For You.
-- Following feed still works.
-- Posts with hashtags the user liked/bookmarked/reposted/commented on rank higher.
-- Posts from followed users rank higher.
-- Old low-engagement posts rank lower.
-- followers visibility posts are hidden from unrelated users.
-
-12. Optional improvements after MVP
-
-- Add pagination with limit and cursor.
-- Add a lightweight recommendationReason field for debugging.
-- Add database indexes for scoring/filtering if feed queries become slow.
-- Add a dedicated user-interest table if recommendations need to scale.
+- [ ] Add missing test coverage for new/core flows. (Review current test folder status!)

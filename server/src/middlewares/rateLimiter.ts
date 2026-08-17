@@ -5,7 +5,7 @@ export const authLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: 'Too many attempts. Please try again later.' },
+  message: { status: 429, message: 'Too many attempts. Please try again later.' },
 });
 
 export const feedLimiter = rateLimit({
@@ -13,7 +13,7 @@ export const feedLimiter = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: 'Too many requests. Slow down.' },
+  message: { status: 429, message: 'Too many requests. Slow down.' },
 });
 
 export const discoveryLimiter = rateLimit({
@@ -21,5 +21,5 @@ export const discoveryLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: 'Too many requests. Slow down.' },
+  message: { status: 429, message: 'Too many requests. Slow down.' },
 });

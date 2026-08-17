@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "~/com
 import { Switch } from "~/components/ui/switch";
 import { Separator } from "~/components/ui/separator";
 import { LoadingState } from "~/components/ui/spinner";
+import { QueryErrorState } from "~/components/QueryState";
 import { api } from "~/lib/axios";
 import { queryKeys } from "~/lib/react-query";
 import { useDocumentTitle } from "~/lib/title";
@@ -91,7 +92,7 @@ export default function NotificationsSettings() {
 
   const queryClient = useQueryClient();
 
-  const { data: settings, isLoading } = useQuery<NotificationSettingsDto>({
+  const { data: settings, isLoading, isError, refetch } = useQuery<NotificationSettingsDto>({
     queryKey: queryKeys.settings.notifications,
     queryFn: async () => {
       const res = await api.get<APIResponse>("/api/settings/notifications");
@@ -132,6 +133,10 @@ export default function NotificationsSettings() {
 
   if (isLoading || !settings) {
     return <LoadingState label="Loading notification settings..." variant="section" />;
+  }
+
+  if (isError) {
+    return <QueryErrorState message="Failed to load notification settings." onRetry={() => refetch()} />;
   }
 
   const renderSettingsGroup = (

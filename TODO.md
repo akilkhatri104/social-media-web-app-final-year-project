@@ -37,7 +37,7 @@
   - Make sure session/localStorage data syncs reliably (e.g., on logout in another tab).
   - Sanitize/fallback logic for corrupted or missing local/sessionStorage entries.
 
-- [ ] Create explicit “error” and “pending” UI screens for each user data fetching route.
+- [-] Create explicit “error” and “pending” UI screens for each user data fetching route.
   - All places using `useQuery`, etc., should clearly differentiate empty/error/loading.
 
 - [ ] Regularly run and act upon `npm audit --production` in both client and server.

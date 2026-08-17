@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { LoadingState, Spinner } from "~/components/ui/spinner";
+import { QueryErrorState } from "~/components/QueryState";
 
 // INDIVIDUAL MESSAGE ITEM COMPONENT WITH GESTURE SWIPING & HOVER REPLY
 interface MessageBubbleItemProps {
@@ -191,7 +192,7 @@ export default function MessagesRoute() {
   const initialUsername = searchParams.get("to")?.replace(/^@/, "").trim() || "";
 
   // Fetch Conversations List
-  const { data: conversations = [], isLoading: isConversationsLoading } = useQuery<ConversationDto[]>({
+  const { data: conversations = [], isLoading: isConversationsLoading, isError: isConversationsError } = useQuery<ConversationDto[]>({
     queryKey: ["conversations"],
     queryFn: async () => {
       const res = await api.get<APIResponse>("/api/messages/conversations");
@@ -228,7 +229,7 @@ export default function MessagesRoute() {
   });
 
   // Fetch Chat History
-  const { data: chatHistory = [], isLoading: isChatLoading } = useQuery<MessageDto[]>({
+  const { data: chatHistory = [], isLoading: isChatLoading, isError: isChatError } = useQuery<MessageDto[]>({
     queryKey: ["chat-history", selectedUserId],
     queryFn: async () => {
       const res = await api.get<APIResponse>(`/api/messages/${selectedUserId}`);
@@ -398,6 +399,8 @@ export default function MessagesRoute() {
               <p className="text-xs font-semibold text-muted-foreground px-3 py-1">Recent Chats</p>
               {isConversationsLoading ? (
                 <LoadingState label="Loading conversations..." variant="section" />
+              ) : isConversationsError ? (
+                <QueryErrorState message="Failed to load conversations." className="py-8" />
               ) : conversations.length > 0 ? (
                 conversations.map((chat) => {
                   const isActive = chat.user.id === selectedUserId;
@@ -490,6 +493,8 @@ export default function MessagesRoute() {
             >
               {isChatLoading && chatHistory.length === 0 ? (
                 <LoadingState label="Loading chat history..." className="h-full" spinnerClassName="size-8" />
+              ) : isChatError ? (
+                <QueryErrorState message="Failed to load messages." className="h-full" />
               ) : chatHistory.length > 0 ? (
                 chatHistory.map((msg, index) => {
                   const isMe = msg.senderId === me?.id;

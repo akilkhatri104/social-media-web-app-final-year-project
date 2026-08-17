@@ -14,6 +14,7 @@ import { api } from "~/lib/axios";
 import type { APIResponse, TrendingHashtag } from "~/lib/types";
 import { queryKeys } from "~/lib/react-query";
 import { LoadingState } from "~/components/ui/spinner";
+import { QueryErrorState } from "~/components/QueryState";
 
 const suggestedSearches = [
   "Find trending conversations",
@@ -22,7 +23,7 @@ const suggestedSearches = [
 ];
 
 export function ExploreSidebar() {
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError } = useQuery({
     queryKey: queryKeys.hashtags.trending,
     queryFn: async () => {
       const res = await api.get<APIResponse>("/api/hashtags/trending");
@@ -58,6 +59,8 @@ export function ExploreSidebar() {
             <CardContent className="flex flex-wrap gap-2">
               {isPending ? (
                 <LoadingState label="Loading tags..." variant="inline" />
+              ) : isError ? (
+                <QueryErrorState message="Failed to load trending hashtags." className="py-4" />
               ) : data && data.length > 0 ? (
                 data.map((tag, index) => (
                   <Link

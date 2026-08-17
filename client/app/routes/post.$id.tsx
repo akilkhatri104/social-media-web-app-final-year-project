@@ -8,6 +8,7 @@ import type { Route } from "./+types/post.$id";
 import { queryKeys } from "~/lib/react-query";
 import { truncateTitleSegment, useDocumentTitle } from "~/lib/title";
 import { LoadingState } from "~/components/ui/spinner";
+import { QueryEmptyState, QueryErrorState } from "~/components/QueryState";
 
 export async function clientLoader({ params }: Route.ClientActionArgs) {
     try {
@@ -23,7 +24,7 @@ export default function PostPage() {
     const initialData = useLoaderData<typeof clientLoader>()
     const { id } = useParams();
 
-    const { data, isPending } = useQuery({
+    const { data, isPending, isError } = useQuery({
         queryKey: queryKeys.posts.detail(id),
         queryFn: async () => {
             const res = await api.get(`/api/posts/${id}`);
@@ -44,8 +45,12 @@ export default function PostPage() {
         return <LoadingState label="Loading post..." variant="page" />;
     }
 
+    if (isError) {
+        return <QueryErrorState message="Failed to load post. Please try again." />;
+    }
+
     if (!data) {
-        return <div className="p-6">Post not found</div>;
+        return <QueryEmptyState label="This post could not be found." />;
     }
 
     return (

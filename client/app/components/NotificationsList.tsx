@@ -5,11 +5,12 @@ import { queryKeys } from "~/lib/react-query";
 import type { APIResponse, NotificationDto } from "~/lib/types";
 import { Button } from "~/components/ui/button";
 import { LoadingState } from "~/components/ui/spinner";
+import { QueryEmptyState, QueryErrorState } from "~/components/QueryState";
 
 export default function NotificationsList() {
   const queryClient = useQueryClient();
 
-  const { data: notifications = [], isLoading } = useQuery<NotificationDto[]>({
+  const { data: notifications = [], isLoading, isError, refetch } = useQuery<NotificationDto[]>({
     queryKey: queryKeys.notifications.all,
     queryFn: async () => {
       const res = await api.get<APIResponse>(`/api/notifications`);
@@ -41,6 +42,8 @@ export default function NotificationsList() {
   });
 
   if (isLoading) return <LoadingState label="Loading notifications..." variant="section" />;
+
+  if (isError) return <QueryErrorState message="Failed to load notifications." onRetry={() => refetch()} />;
 
   return (
     <div className="p-4">

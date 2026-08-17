@@ -15,6 +15,7 @@ import FollowButton from "~/components/FollowButton";
 import { Button } from "~/components/ui/button";
 import { queryKeys } from "~/lib/react-query";
 import { LoadingState } from "~/components/ui/spinner";
+import { QueryEmptyState, QueryErrorState } from "~/components/QueryState";
 import { useDocumentTitle } from "~/lib/title";
 import { UserAvatar } from "~/components/UserAvatar";
 
@@ -25,7 +26,7 @@ export default function UserProfile() {
   const cleanUsername = username?.replace("@", "");
   const { data: session } = useMe();
 
-  const { data: userData, isLoading: userLoading } = useQuery({
+  const { data: userData, isLoading: userLoading, isError: userError } = useQuery({
     queryKey: queryKeys.users.byUsername(cleanUsername),
     queryFn: async () => {
       const res = await api.get(`/api/users/${cleanUsername}`);
@@ -92,7 +93,8 @@ const { data: likedPostsData, isLoading: likesLoading } = useQuery({
 
 
   if (userLoading) return <LoadingState label="Loading profile..." variant="page" />;
-  if (!userData) return <p className="p-10 text-white">User not found</p>;
+  if (userError) return <QueryErrorState message="Failed to load profile. Please try again." />;
+  if (!userData) return <QueryEmptyState label={`User "${cleanUsername}" not found.`} />;
 
   const isOwnProfile =
     String(session?.id ?? "") === String(userData?.id ?? "") ||

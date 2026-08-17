@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { useLocation, useNavigate } from "react-router";
 import { useMe } from "~/hooks/useMe";
 import { useEffect, useState } from "react";
+import { safeSessionStorageGetItem, safeSessionStorageSetItem, STORAGE_KEYS } from "~/lib/storage";
 
 
 export default function VerifyEmailPrompt() {
@@ -10,12 +11,12 @@ export default function VerifyEmailPrompt() {
     const location = useLocation()
     const navigate = useNavigate()
     const [dismissed, setDismissed] = useState(
-        sessionStorage.getItem('email-verify-prompt-dismissed') === "true"
+        safeSessionStorageGetItem(STORAGE_KEYS.EMAIL_VERIFY_DISMISSED) === "true"
     )
 
     const handleDismiss = () => {
         setDismissed(true)
-        sessionStorage.setItem('email-verify-prompt-dismissed', "true")
+        safeSessionStorageSetItem(STORAGE_KEYS.EMAIL_VERIFY_DISMISSED, "true")
     }
 
 

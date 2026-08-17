@@ -25,6 +25,7 @@ import { queryKeys } from "~/lib/react-query";
 import RepostFeedCard from "~/components/RepostFeedCard";
 import { LoadingState, Spinner } from "~/components/ui/spinner";
 import { useDocumentTitle } from "~/lib/title";
+import { safeSessionStorageGetItem, safeSessionStorageSetItem, STORAGE_KEYS, VALID_HOME_TABS } from "~/lib/storage";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -41,9 +42,9 @@ export default function Home() {
   useDocumentTitle(pageTitle);
 
   useEffect(() => {
-    const savedTab = sessionStorage.getItem("default-tab")
-    if (savedTab) {
-      setTab(savedTab)
+    const savedTab = safeSessionStorageGetItem(STORAGE_KEYS.HOME_TAB)
+    if (savedTab && VALID_HOME_TABS.includes(savedTab as typeof tab)) {
+      setTab(savedTab as typeof tab)
     }
     setMounted(true)
   }, [])
@@ -90,8 +91,8 @@ export default function Home() {
         {/* Header Tabs */}
         <div className="sticky top-0 w-full bg-background/80 backdrop-blur-md border-b p-4 z-10">
           <Tabs value={tab} onValueChange={(value) => {
-            sessionStorage.setItem("default-tab", value)
-            setTab(value)
+            safeSessionStorageSetItem(STORAGE_KEYS.HOME_TAB, value)
+            setTab(value as typeof tab)
           }}>
             <TabsList className="w-full" variant="line">
               <TabsTrigger value="for-you">For You</TabsTrigger>

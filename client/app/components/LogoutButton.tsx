@@ -5,6 +5,7 @@ import { api } from "~/lib/axios";
 import type { APIResponse } from "~/lib/types";
 import { useNavigate } from "react-router";
 import { queryClient, queryKeys } from "~/lib/react-query";
+import { safeLocalStorageSetItem, safeSessionStorageClear, STORAGE_KEYS } from "~/lib/storage";
 
 type Props = {
   variant?:
@@ -31,7 +32,8 @@ const LogoutButton = ({ variant, className }: Props) => {
         toast.error(response.data.message);
       }
 
-      sessionStorage.clear();
+      safeSessionStorageClear();
+      safeLocalStorageSetItem(STORAGE_KEYS.CROSS_TAB_LOGOUT, String(Date.now()));
       toast.success(response.data.message);
       navigate("/");
       queryClient.setQueryData(queryKeys.auth.me, null);

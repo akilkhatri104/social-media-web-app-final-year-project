@@ -33,7 +33,7 @@
 
 ## LOW PRIORITY
 
-- [ ] Add handling for SSR quirks and multi-tab session behavior on the frontend:
+- [-] Add handling for SSR quirks and multi-tab session behavior on the frontend:
   - Make sure session/localStorage data syncs reliably (e.g., on logout in another tab).
   - Sanitize/fallback logic for corrupted or missing local/sessionStorage entries.
 

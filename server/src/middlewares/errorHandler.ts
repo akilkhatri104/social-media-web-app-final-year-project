@@ -19,26 +19,56 @@ export class AppError extends Error {
   }
 }
 
+function sanitizeErrorMessage(err: unknown): string {
+  if (err instanceof AppError) {
+    return err.message;
+  }
+
+  if (err instanceof APIError) {
+    return err.message || 'Request failed';
+  }
+
+  if (err instanceof Error) {
+    const msg = err.message.toLowerCase();
+    if (msg.includes('econnrefused') || msg.includes('connect')) {
+      return 'Service temporarily unavailable. Please try again later.';
+    }
+    if (msg.includes('ETIMEOUT') || msg.includes('etimedout') || msg.includes('timeout')) {
+      return 'Request timed out. Please try again later.';
+    }
+    if (msg.includes('duplicate') || msg.includes('unique') || msg.includes('constraint')) {
+      return 'A conflict occurred. Please try again.';
+    }
+    if (msg.includes('foreign key') || msg.includes('violates')) {
+      return 'Operation failed due to a data constraint.';
+    }
+  }
+
+  return 'An unexpected error occurred. Please try again later.';
+}
+
+function resolveStatus(err: unknown): number {
+  if (err instanceof AppError) {
+    return err.status || 500;
+  }
+  if (err instanceof APIError) {
+    return err.statusCode || 500;
+  }
+  return 500;
+}
+
 export const errorHandler = (
-  err: AppError | APIError,
+  err: AppError | APIError | Error,
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   console.error('ERROR :: ', err);
 
-  if (err instanceof APIError) {
-    console.log(err.message);
-  }
-  const status =
-    err instanceof AppError
-      ? err.status
-      : err instanceof APIError
-        ? err.statusCode
-        : 500;
+  const status = resolveStatus(err);
+  const message = sanitizeErrorMessage(err);
 
-  const errorMsg = err.message;
   return res
-    .status(status || 500)
-    .json(new APIResponse(errorMsg || 'Internal server errror', status));
+    .status(status)
+    .json(new APIResponse(message, status));
 };

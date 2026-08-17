@@ -27,7 +27,7 @@
 
 - [-] Add basic express rate-limiting (e.g., on login/signup/discovery/feed endpoints) to reduce spam, brute force, and abuse risk.
 
-- [ ] Improve error boundary handling:
+- [-] Improve error boundary handling:
   - Ensure any thrown error does NOT leak stack traces or internal details to users.
   - Prefer custom, user-friendly error messages, especially for auth/database/config issues.
 

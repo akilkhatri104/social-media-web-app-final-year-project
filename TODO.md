@@ -25,7 +25,7 @@
 - [-] Replace all backend code using `process.env.*!` (non-null assertions) with robust runtime validation at startup:
   - If any critical env var is missing, log a clear error and fail fast.
 
-- [ ] Add basic express rate-limiting (e.g., on login/signup/discovery/feed endpoints) to reduce spam, brute force, and abuse risk.
+- [-] Add basic express rate-limiting (e.g., on login/signup/discovery/feed endpoints) to reduce spam, brute force, and abuse risk.
 
 - [ ] Improve error boundary handling:
   - Ensure any thrown error does NOT leak stack traces or internal details to users.

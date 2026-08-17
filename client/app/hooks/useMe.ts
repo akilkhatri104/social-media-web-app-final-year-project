@@ -27,10 +27,10 @@ export function useMe() {
     const query = useQuery({
         queryKey: queryKeys.auth.me,
         queryFn: fetchCurrentUser,
-        staleTime: 5 * 60 * 1000,
-        gcTime: 30 * 60 * 1000,
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
+        staleTime: 30_000, // 30 sec: always revalidate user data on navigation/visibility
+        gcTime: 60_000, // 1 minute: don't keep user cache forever
+        refetchOnMount: true, // always re-check user session on mount
+        refetchOnWindowFocus: true, // always re-check user session on window refocus
         retry: false,
     });
 

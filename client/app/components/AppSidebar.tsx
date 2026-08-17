@@ -49,7 +49,9 @@ export function AppSidebar() {
       return Number(res.data.data?.unreadCount || 0);
     },
     enabled: isAuth,
-    refetchInterval: 5000,
+    staleTime: 10_000, // 10s: notifications are dynamic
+    refetchOnWindowFocus: true,
+    refetchInterval: 10_000,
   });
 
   const sidebarItems = [

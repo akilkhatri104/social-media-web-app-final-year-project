@@ -62,7 +62,7 @@ export default function Home() {
     enabled: mounted,
     refetchOnMount: false,
     refetchOnReconnect: false,
-    staleTime: Infinity,
+    staleTime: 15_000, // 15 sec ensures the timeline/feed keeps updating for user
   });
 
 

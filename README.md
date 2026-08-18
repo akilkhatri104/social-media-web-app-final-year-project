@@ -46,6 +46,10 @@ A social media web application for college students and faculties to connect and
 - **express-rate-limit** for API rate limiting
 - **Jest** + **Supertest** for tests
 
+## Documentation
+
+- **Architecture & feature implementation details** – see [TECHNICAL.md](./TECHNICAL.md)
+
 ## Run Locally
 
 ### Prerequisites

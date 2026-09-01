@@ -7,6 +7,7 @@ import { db } from '../lib/db/client.ts';
 import { user } from '../lib/auth-schema.ts';
 import { eq, and, not, or, ilike } from 'drizzle-orm';
 import { APIError } from 'better-auth';
+import { assessRisk } from '../lib/riskAssessment.ts';
 
 export async function me(req: Request, res: Response) {
   if (!req.session) {
@@ -22,6 +23,19 @@ export async function signin(req: Request, res: Response) {
   try {
     const { password, username }: { password: string; username: string } =
       req.body;
+    const riskAssessment = assessRisk({
+      failedAttempts: 0,
+      newDevice: false,
+      newIP: false,
+      unusualLoginTime: false,
+    });
+
+    console.log("LOGIN RISK:", {
+      username,
+      ip: req.ip,
+      userAgent: req.headers["user-agent"],
+      ...riskAssessment,
+    });
     if (!username) {
       throw new AppError('Email or Username are required', 400);
     }

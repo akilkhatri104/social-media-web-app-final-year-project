@@ -44,8 +44,12 @@ export async function markAsRead(req: Request, res: Response) {
     const updated = await db
       .update(notification)
       .set({ readAt: new Date() })
-      .where(eq(notification.id, id))
-      .where(eq(notification.recipientId, req.session.user.id));
+      .where(
+        and(
+          eq(notification.id, id),
+          eq(notification.recipientId, req.session.user.id),
+        ),
+      );
 
     if (!updated) {
       throw new AppError('Error while marking notification read', 500);

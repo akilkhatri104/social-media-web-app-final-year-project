@@ -15,6 +15,7 @@ import {
   isPendingMFA,
 } from '../lib/pendingMFA.ts';
 import { session } from "../lib/auth-schema.ts";
+import { assessMLRisk } from '../lib/mlRiskAssessment.js';
 
 export async function me(req: Request, res: Response) {
   if (!req.session) {
@@ -37,6 +38,10 @@ export async function signin(req: Request, res: Response) {
   });
 
   let eventUserId: string | null = null;
+  let failedAttempts = 0;
+  let newIP = false;
+  let newDevice = false;
+  let unusualLoginTime = false;
 
   try {
     const { password, username }: { password: string; username: string } =
@@ -62,55 +67,75 @@ export async function signin(req: Request, res: Response) {
     const ipAddress = req.ip ?? null;
     const userAgent = req.headers['user-agent'] ?? null;
 
-let failedAttempts = 0;
+    // Count consecutive failed authentication attempts.
+    if (eventUserId) {
+      const recentEvents = await db
+        .select({
+          success: authRiskEvent.success,
+        })
+        .from(authRiskEvent)
+        .where(eq(authRiskEvent.userId, eventUserId))
+        .orderBy(authRiskEvent.createdAt);
 
-if (eventUserId) {
-  const recentEvents = await db
-    .select({
-      success: authRiskEvent.success,
-    })
-    .from(authRiskEvent)
-    .where(eq(authRiskEvent.userId, eventUserId))
-    .orderBy(authRiskEvent.createdAt);
-
-  for (let i = recentEvents.length - 1; i >= 0; i--) {
-    if (recentEvents[i]?.success === false) {
-      failedAttempts++;
-    } else {
-      break;
+      for (let i = recentEvents.length - 1; i >= 0; i--) {
+        if (recentEvents[i]?.success === false) {
+          failedAttempts++;
+        } else {
+          break;
+        }
+      }
     }
-  }
-}
 
-let newIP = false;
-let newDevice = false;
+    // Compare current login context with the user's first
+    // recorded authentication context.
+    if (eventUserId) {
+      const previousEvents = await db
+        .select({
+          ipAddress: authRiskEvent.ipAddress,
+          userAgent: authRiskEvent.userAgent,
+        })
+        .from(authRiskEvent)
+        .where(eq(authRiskEvent.userId, eventUserId))
+        .orderBy(authRiskEvent.createdAt)
+        .limit(1);
 
-if (eventUserId) {
-  const previousEvents = await db
-    .select({
-      ipAddress: authRiskEvent.ipAddress,
-      userAgent: authRiskEvent.userAgent,
-    })
-    .from(authRiskEvent)
-    .where(eq(authRiskEvent.userId, eventUserId))
-    .limit(1);
+      const previous = previousEvents[0];
 
-  const previous = previousEvents[0];
+      if (previous) {
+        newIP =
+          Boolean(previous.ipAddress) &&
+          Boolean(ipAddress) &&
+          previous.ipAddress !== ipAddress;
 
-if (previous) {
-  newIP = previous.ipAddress !== ipAddress;
-  newDevice = previous.userAgent !== userAgent;
-}
-}
+        newDevice =
+          Boolean(previous.userAgent) &&
+          Boolean(userAgent) &&
+          previous.userAgent !== userAgent;
+      }
+    }
 
     const currentHour = new Date().getHours();
-    const unusualLoginTime = currentHour >= 0 && currentHour < 6;
+    unusualLoginTime = currentHour >= 0 && currentHour < 6;
 
+    // Rule-based risk assessment.
     riskAssessment = assessRisk({
       failedAttempts,
       newDevice,
       newIP,
       unusualLoginTime,
+    });
+
+    // ML-based risk assessment.
+    const mlRiskAssessment = assessMLRisk({
+      failedAttempts,
+      newIp: newIP,
+      newDevice,
+      unusualLoginTime,
+    });
+
+    console.log('ML RISK:', {
+      level: mlRiskAssessment.level,
+      confidence: mlRiskAssessment.confidence,
     });
 
     console.log('LOGIN RISK:', {
@@ -122,16 +147,10 @@ if (previous) {
       ...riskAssessment,
     });
 
-    // HIGH risk: block before authentication.
-    if (riskAssessment.level === 'HIGH') {
-      throw new AppError(
-        'Login blocked because the authentication risk is too high',
-        403,
-      );
-    }
-
     let response;
 
+    // Authenticate the password FIRST.
+    // HIGH risk no longer blocks before password verification.
     if (
       !username.match(
         /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*)?/g,
@@ -154,32 +173,82 @@ if (previous) {
       res.setHeader('Set-Cookie', setCookies);
     }
 
-    // MEDIUM risk: require OTP before protected resources are accessible.
+    /*
+     * HIGH RISK
+     *
+     * Password is correct, but the authentication context is risky.
+     * Require an additional security challenge instead of blocking login.
+     */
+    if (riskAssessment.level === 'HIGH') {
+      const sessionToken = response.response?.token;
+
+      if (!sessionToken) {
+        throw new AppError(
+          'Unable to start security verification',
+          500,
+        );
+      }
+
+      const sessionRecord = await db.query.session.findFirst({
+        where: eq(session.token, sessionToken),
+      });
+
+      if (!sessionRecord) {
+        throw new AppError(
+          'Unable to start security verification',
+          500,
+        );
+      }
+
+      markPendingMFA(sessionRecord.id);
+
+      return res.status(202).json(
+        new APIResponse(
+          'Additional security verification required',
+          202,
+          {
+            securityChallengeRequired: true,
+            challengeType: 'favorite-animal',
+            challengeQuestion: 'What is your favorite animal?',
+            riskLevel: riskAssessment.level,
+          },
+        ),
+      );
+    }
+
+    /*
+     * MEDIUM RISK
+     *
+     * Require email OTP.
+     */
     if (riskAssessment.level === 'MEDIUM') {
       if (!eventUserId) {
-  throw new AppError('Unable to start MFA verification', 500);
-}
+        throw new AppError('Unable to start MFA verification', 500);
+      }
 
-const sessionToken = response.response?.token;
+      const sessionToken = response.response?.token;
 
-if (!sessionToken) {
-  throw new AppError('Unable to start MFA verification', 500);
-}
+      if (!sessionToken) {
+        throw new AppError('Unable to start MFA verification', 500);
+      }
 
-const sessionRecord = await db.query.session.findFirst({
-  where: eq(session.token, sessionToken),
-});
+      const sessionRecord = await db.query.session.findFirst({
+        where: eq(session.token, sessionToken),
+      });
 
-if (!sessionRecord) {
-  throw new AppError('Unable to start MFA verification', 500);
-}
+      if (!sessionRecord) {
+        throw new AppError('Unable to start MFA verification', 500);
+      }
 
-markPendingMFA(sessionRecord.id);
+      markPendingMFA(sessionRecord.id);
 
       const email = existingUser?.email;
 
       if (!email) {
-        throw new AppError('Email is required for MFA verification', 400);
+        throw new AppError(
+          'Email is required for MFA verification',
+          400,
+        );
       }
 
       const otpResponse = await auth.api.sendVerificationOTP({
@@ -205,7 +274,11 @@ markPendingMFA(sessionRecord.id);
       );
     }
 
-    // LOW risk: normal successful authentication.
+    /*
+     * LOW RISK
+     *
+     * Normal successful authentication.
+     */
     await db.insert(authRiskEvent).values({
       userId: eventUserId,
       ipAddress,
@@ -219,14 +292,11 @@ markPendingMFA(sessionRecord.id);
       riskLevel: riskAssessment.level,
     });
 
-return res
-  .status(200)
-  .json(
-    new APIResponse('User signed in successfully', 200, {
-      user: response.response?.user,
-    }),
-  );
-
+    return res.status(200).json(
+      new APIResponse('User signed in successfully', 200, {
+        user: response.response?.user,
+      }),
+    );
   } catch (error) {
     console.error('signin :: ', error);
 
@@ -239,16 +309,18 @@ return res
         ipAddress,
         userAgent,
         success: false,
-        failedAttempts: 1,
-        newIp: true,
-        newDevice: true,
-        unusualLoginTime:
-          new Date().getHours() >= 0 && new Date().getHours() < 6,
+        failedAttempts: failedAttempts + 1,
+        newIp: newIP,
+        newDevice,
+        unusualLoginTime,
         riskScore: riskAssessment.score,
         riskLevel: riskAssessment.level,
       });
     } catch (loggingError) {
-      console.error('signin risk event logging :: ', loggingError);
+      console.error(
+        'signin risk event logging :: ',
+        loggingError,
+      );
     }
 
     throw error instanceof AppError || error instanceof APIError
@@ -322,6 +394,95 @@ return res.status(200).json(
     console.error('verifySigninOTP :: ', error);
 
     throw error instanceof AppError || error instanceof APIError
+      ? error
+      : new AppError();
+  }
+}
+
+export async function verifySecurityChallenge(
+  req: Request,
+  res: Response,
+) {
+  try {
+    const { answer } = req.body;
+
+    if (!answer || typeof answer !== 'string') {
+      throw new AppError(
+        'Security challenge answer is required',
+        400,
+      );
+    }
+
+    const currentSession = await auth.api.getSession({
+      headers: req.headers,
+    });
+
+    if (!currentSession) {
+      throw new AppError('Login session not found', 401);
+    }
+
+    if (!isPendingMFA(currentSession.session.id)) {
+      throw new AppError(
+        'No pending security verification',
+        400,
+      );
+    }
+
+    const expectedAnswer =
+      process.env.HIGH_RISK_SECURITY_ANSWER;
+
+    if (!expectedAnswer) {
+      throw new AppError(
+        'Security challenge is not configured',
+        500,
+      );
+    }
+
+    if (
+      answer.trim().toLowerCase() !==
+      expectedAnswer.trim().toLowerCase()
+    ) {
+      throw new AppError(
+        'Incorrect security challenge answer',
+        401,
+      );
+    }
+
+    completeMFA(currentSession.session.id);
+
+    await db.insert(authRiskEvent).values({
+      userId: currentSession.user.id,
+      ipAddress: req.ip ?? null,
+      userAgent: req.headers['user-agent'] ?? null,
+      success: true,
+      failedAttempts: 0,
+      newIp: false,
+      newDevice: false,
+      unusualLoginTime:
+        new Date().getHours() >= 0 &&
+        new Date().getHours() < 6,
+      riskScore: 0,
+      riskLevel: 'LOW',
+    });
+
+    return res.status(200).json(
+      new APIResponse(
+        'Security verification successful',
+        200,
+        {
+          securityVerified: true,
+          user: currentSession.user,
+        },
+      ),
+    );
+  } catch (error) {
+    console.error(
+      'verifySecurityChallenge :: ',
+      error,
+    );
+
+    throw error instanceof AppError ||
+      error instanceof APIError
       ? error
       : new AppError();
   }

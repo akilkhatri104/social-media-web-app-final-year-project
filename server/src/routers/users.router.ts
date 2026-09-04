@@ -12,6 +12,7 @@ import {
   getUserByUsername,
   searchUsers,
   verifySigninOTP,
+  verifySecurityChallenge,
 } from '../controllers/users.controller.js';
 import { verifyAuth } from '../middlewares/verifyAuth.ts';
 import { noCache } from '../middlewares/noCache.ts';
@@ -26,6 +27,10 @@ protectedRouter.use(verifyAuth);
 
 publicRouter.post('/signin', signin);
 publicRouter.post('/signin/verify-otp', verifySigninOTP);
+publicRouter.post(
+  '/signin/verify-security',
+  verifySecurityChallenge,
+);
 publicRouter.post('/signup', upload.single('image'), signup);
 publicRouter.post('/forget-password/send', sendForgetPasswordOTP);
 publicRouter.post('/forget-password/verify', verifyForgetPasswordOTP);

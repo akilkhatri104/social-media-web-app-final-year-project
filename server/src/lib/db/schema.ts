@@ -306,3 +306,30 @@ export const notificationRelations = relations(notification, ({ one }) => ({
   }),
 }));
 
+export const authRiskEvent = p.pgTable('auth_risk_event', {
+  id: p.serial('id').primaryKey(),
+
+  userId: p
+    .text('user_id')
+    .references(() => user.id, { onDelete: 'cascade' }),
+
+  ipAddress: p.text('ip_address'),
+  userAgent: p.text('user_agent'),
+
+  success: p.boolean('success').notNull(),
+
+  failedAttempts: p.integer('failed_attempts').notNull().default(0),
+  newIp: p.boolean('new_ip').notNull().default(false),
+  newDevice: p.boolean('new_device').notNull().default(false),
+  unusualLoginTime: p
+    .boolean('unusual_login_time')
+    .notNull()
+    .default(false),
+
+  riskScore: p.integer('risk_score').notNull(),
+  riskLevel: p
+    .text('risk_level', { enum: ['LOW', 'MEDIUM', 'HIGH'] })
+    .notNull(),
+
+  createdAt: p.timestamp('created_at').defaultNow().notNull(),
+});

@@ -43,33 +43,45 @@ export const auth = betterAuth({
         try {
           let res;
           if (type === 'email-verification') {
-            res = await mailSender(
-              email,
-              'Email Verification OTP',
-              `
-              <p>
-              Dear User, <br/>
-              Here is your OTP for email verification <br/>
-              <strong>${otp}</strong> <br/>
-              Thank You!
-              </p>
-              `,
-            );
-          } else {
-            res = await mailSender(
-              email,
-              'Forget Password OTP',
-              `
-              <p>
-              Dear User, <br/>
-              Here is your OTP for reseting password <br/>
-              <strong>${otp}</strong> <br/>
-              Thank You!
-              </p>
-              `,
-            );
-          }
-
+    res = await mailSender(
+    email,
+    'Email Verification OTP',
+    `
+    <p>
+    Dear User, <br/>
+    Here is your OTP for email verification <br/>
+    <strong>${otp}</strong> <br/>
+    Thank You!
+    </p>
+    `,
+  );
+} else if (type === 'sign-in') {
+  res = await mailSender(
+    email,
+    'Login Verification OTP',
+    `
+    <p>
+    Dear User, <br/>
+    Here is your OTP to complete login verification <br/>
+    <strong>${otp}</strong> <br/>
+    Thank You!
+    </p>
+    `,
+  );
+} else {
+  res = await mailSender(
+    email,
+    'Forget Password OTP',
+    `
+    <p>
+    Dear User, <br/>
+    Here is your OTP for reseting password <br/>
+    <strong>${otp}</strong> <br/>
+    Thank You!
+    </p>
+    `,
+  );
+}
           if (!res) {
             throw new AppError();
           }

@@ -5,9 +5,16 @@ import { APIResponse } from '../lib/apiResponse.ts';
 import { deleteFromCloudinary, uploadToCloudinary } from '../lib/cloudinary.ts';
 import { db } from '../lib/db/client.ts';
 import { user } from '../lib/auth-schema.ts';
-import { eq, and, not, or, ilike } from 'drizzle-orm';
+import { eq, and, not, or, ilike, count, gte } from 'drizzle-orm';
 import { APIError } from 'better-auth';
+import { authRiskEvent } from '../lib/db/schema.ts';
 import { assessRisk } from '../lib/riskAssessment.ts';
+import {
+  markPendingMFA,
+  completeMFA,
+  isPendingMFA,
+} from '../lib/pendingMFA.ts';
+import { session } from "../lib/auth-schema.ts";
 
 export async function me(req: Request, res: Response) {
   if (!req.session) {
@@ -19,23 +26,22 @@ export async function me(req: Request, res: Response) {
   );
 }
 
+
+
 export async function signin(req: Request, res: Response) {
+  let riskAssessment = assessRisk({
+    failedAttempts: 0,
+    newDevice: false,
+    newIP: false,
+    unusualLoginTime: false,
+  });
+
+  let eventUserId: string | null = null;
+
   try {
     const { password, username }: { password: string; username: string } =
       req.body;
-    const riskAssessment = assessRisk({
-      failedAttempts: 0,
-      newDevice: false,
-      newIP: false,
-      unusualLoginTime: false,
-    });
 
-    console.log("LOGIN RISK:", {
-      username,
-      ip: req.ip,
-      userAgent: req.headers["user-agent"],
-      ...riskAssessment,
-    });
     if (!username) {
       throw new AppError('Email or Username are required', 400);
     }
@@ -44,11 +50,91 @@ export async function signin(req: Request, res: Response) {
       throw new AppError('Password is required', 400);
     }
 
-    let response = null;
-    // Is not an email, hence user is signing in through username
+    const existingUser = await db.query.user.findFirst({
+      where: or(
+        eq(user.username, username.toLowerCase()),
+        eq(user.email, username.toLowerCase()),
+      ),
+    });
+
+    eventUserId = existingUser?.id ?? null;
+
+    const ipAddress = req.ip ?? null;
+    const userAgent = req.headers['user-agent'] ?? null;
+
+let failedAttempts = 0;
+
+if (eventUserId) {
+  const recentEvents = await db
+    .select({
+      success: authRiskEvent.success,
+    })
+    .from(authRiskEvent)
+    .where(eq(authRiskEvent.userId, eventUserId))
+    .orderBy(authRiskEvent.createdAt);
+
+  for (let i = recentEvents.length - 1; i >= 0; i--) {
+    if (recentEvents[i]?.success === false) {
+      failedAttempts++;
+    } else {
+      break;
+    }
+  }
+}
+
+let newIP = false;
+let newDevice = false;
+
+if (eventUserId) {
+  const previousEvents = await db
+    .select({
+      ipAddress: authRiskEvent.ipAddress,
+      userAgent: authRiskEvent.userAgent,
+    })
+    .from(authRiskEvent)
+    .where(eq(authRiskEvent.userId, eventUserId))
+    .limit(1);
+
+  const previous = previousEvents[0];
+
+if (previous) {
+  newIP = previous.ipAddress !== ipAddress;
+  newDevice = previous.userAgent !== userAgent;
+}
+}
+
+    const currentHour = new Date().getHours();
+    const unusualLoginTime = currentHour >= 0 && currentHour < 6;
+
+    riskAssessment = assessRisk({
+      failedAttempts,
+      newDevice,
+      newIP,
+      unusualLoginTime,
+    });
+
+    console.log('LOGIN RISK:', {
+      username,
+      failedAttempts,
+      newDevice,
+      newIP,
+      unusualLoginTime,
+      ...riskAssessment,
+    });
+
+    // HIGH risk: block before authentication.
+    if (riskAssessment.level === 'HIGH') {
+      throw new AppError(
+        'Login blocked because the authentication risk is too high',
+        403,
+      );
+    }
+
+    let response;
+
     if (
       !username.match(
-        /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
+        /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*)?/g,
       )
     ) {
       response = await auth.api.signInUsername({
@@ -63,17 +149,178 @@ export async function signin(req: Request, res: Response) {
     }
 
     const setCookies = response.headers.getSetCookie();
+
     if (setCookies.length) {
       res.setHeader('Set-Cookie', setCookies);
     }
 
-    return res
-      .status(200)
-      .json(
-        new APIResponse('User signed in successfully', 200, response.response),
+    // MEDIUM risk: require OTP before protected resources are accessible.
+    if (riskAssessment.level === 'MEDIUM') {
+      if (!eventUserId) {
+  throw new AppError('Unable to start MFA verification', 500);
+}
+
+const sessionToken = response.response?.token;
+
+if (!sessionToken) {
+  throw new AppError('Unable to start MFA verification', 500);
+}
+
+const sessionRecord = await db.query.session.findFirst({
+  where: eq(session.token, sessionToken),
+});
+
+if (!sessionRecord) {
+  throw new AppError('Unable to start MFA verification', 500);
+}
+
+markPendingMFA(sessionRecord.id);
+
+      const email = existingUser?.email;
+
+      if (!email) {
+        throw new AppError('Email is required for MFA verification', 400);
+      }
+
+      const otpResponse = await auth.api.sendVerificationOTP({
+        body: {
+          email,
+          type: 'sign-in',
+        },
+      });
+
+      if (!otpResponse.success) {
+        throw new AppError('Unable to send MFA OTP', 500);
+      }
+
+      return res.status(202).json(
+        new APIResponse(
+          'Additional verification required',
+          202,
+          {
+            mfaRequired: true,
+            riskLevel: riskAssessment.level,
+          },
+        ),
       );
+    }
+
+    // LOW risk: normal successful authentication.
+    await db.insert(authRiskEvent).values({
+      userId: eventUserId,
+      ipAddress,
+      userAgent,
+      success: true,
+      failedAttempts,
+      newIp: newIP,
+      newDevice,
+      unusualLoginTime,
+      riskScore: riskAssessment.score,
+      riskLevel: riskAssessment.level,
+    });
+
+return res
+  .status(200)
+  .json(
+    new APIResponse('User signed in successfully', 200, {
+      user: response.response?.user,
+    }),
+  );
+
   } catch (error) {
     console.error('signin :: ', error);
+
+    try {
+      const ipAddress = req.ip ?? null;
+      const userAgent = req.headers['user-agent'] ?? null;
+
+      await db.insert(authRiskEvent).values({
+        userId: eventUserId,
+        ipAddress,
+        userAgent,
+        success: false,
+        failedAttempts: 1,
+        newIp: true,
+        newDevice: true,
+        unusualLoginTime:
+          new Date().getHours() >= 0 && new Date().getHours() < 6,
+        riskScore: riskAssessment.score,
+        riskLevel: riskAssessment.level,
+      });
+    } catch (loggingError) {
+      console.error('signin risk event logging :: ', loggingError);
+    }
+
+    throw error instanceof AppError || error instanceof APIError
+      ? error
+      : new AppError();
+  }
+}
+
+export async function verifySigninOTP(req: Request, res: Response) {
+  try {
+    const { otp } = req.body;
+
+    if (!otp || otp.length !== 6) {
+      throw new AppError('No or invalid OTP provided', 400);
+    }
+
+     const currentSession = await auth.api.getSession({
+      headers: req.headers,
+    });
+
+    if (!currentSession) {
+      throw new AppError('Login session not found', 401);
+    }
+
+    if (!isPendingMFA(currentSession.session.id)) {
+      throw new AppError('No pending MFA verification', 400);
+    }
+
+    const email = currentSession.user.email;
+
+    const result = await auth.api.checkVerificationOTP({
+      body: {
+        email,
+        otp,
+        type: 'sign-in',
+      },
+    });
+
+    if (!result.success) {
+      throw new AppError('OTP not valid', 400);
+    }
+
+completeMFA(currentSession.session.id);
+
+await db.insert(authRiskEvent).values({
+  userId: currentSession.user.id,
+  ipAddress: req.ip ?? null,
+  userAgent: req.headers['user-agent'] ?? null,
+  success: true,
+  failedAttempts: 0,
+  newIp: false,
+  newDevice: false,
+  unusualLoginTime:
+    new Date().getHours() >= 0 && new Date().getHours() < 6,
+  riskScore: 0,
+  riskLevel: 'LOW',
+});
+
+return res.status(200).json(
+  new APIResponse(
+    'MFA verification successful',
+    200,
+    {
+      mfaVerified: true,
+      user: currentSession.user,
+    },
+  ),
+);
+
+  } catch (error) {
+    console.error('verifySigninOTP :: ', error);
+
     throw error instanceof AppError || error instanceof APIError
       ? error
       : new AppError();

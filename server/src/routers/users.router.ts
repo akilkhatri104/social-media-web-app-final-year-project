@@ -11,6 +11,7 @@ import {
   verifyForgetPasswordOTP,
   getUserByUsername,
   searchUsers,
+  verifySigninOTP,
 } from '../controllers/users.controller.js';
 import { verifyAuth } from '../middlewares/verifyAuth.ts';
 import { noCache } from '../middlewares/noCache.ts';
@@ -24,6 +25,7 @@ protectedRouter.use(noCache);
 protectedRouter.use(verifyAuth);
 
 publicRouter.post('/signin', signin);
+publicRouter.post('/signin/verify-otp', verifySigninOTP);
 publicRouter.post('/signup', upload.single('image'), signup);
 publicRouter.post('/forget-password/send', sendForgetPasswordOTP);
 publicRouter.post('/forget-password/verify', verifyForgetPasswordOTP);

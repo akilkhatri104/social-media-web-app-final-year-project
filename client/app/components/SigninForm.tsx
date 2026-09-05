@@ -32,7 +32,8 @@ export const SigninForm = () => {
   const [otp, setOtp] = useState('')
 
   const [securityChallengeRequired, setSecurityChallengeRequired] =
-    useState(false)
+  useState(false)
+  const [securityQuestion, setSecurityQuestion] = useState('')
   const [securityAnswer, setSecurityAnswer] = useState('')
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -71,10 +72,16 @@ export const SigninForm = () => {
 
       // HIGH risk
       if (responseData.securityChallengeRequired) {
-        setSecurityChallengeRequired(true)
-        toast.success('Additional security verification required')
-        return
-      }
+  setSecurityQuestion(
+    responseData.challengeQuestion ?? '',
+  )
+  setSecurityChallengeRequired(true)
+
+  toast.success(
+    'Additional security verification required',
+  )
+  return
+}
 
       // LOW risk
       if (!responseData.user) {
@@ -240,7 +247,7 @@ export const SigninForm = () => {
           </p>
 
           <p className='text-sm mt-2'>
-            What is your favorite animal?
+          {securityQuestion || 'Answer your security question.'}
           </p>
         </div>
 

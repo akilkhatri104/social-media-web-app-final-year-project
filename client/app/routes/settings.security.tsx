@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import { useMe } from "~/hooks/useMe";
@@ -13,6 +12,7 @@ import axios from "axios";
 import { useDocumentTitle } from "~/lib/title";
 import { queryKeys } from "~/lib/react-query";
 import type { APIResponse } from "~/lib/types";
+import { useEffect, useState } from "react";
 
 type SessionItem = {
   id: string;
@@ -77,6 +77,10 @@ export default function SecuritySettings() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const [securityQuestion, setSecurityQuestion] = useState("");
+  const [securityAnswer, setSecurityAnswer] = useState("");
+  const [editingSecurityQuestion, setEditingSecurityQuestion] = useState(false);
+
   // ── Change Password ──────────────────────────────────────────────
   const changePasswordMutation = useMutation({
     mutationFn: async (payload: { currentPassword: string; newPassword: string }) => {
@@ -113,6 +117,87 @@ export default function SecuritySettings() {
     }
     changePasswordMutation.mutate({ currentPassword, newPassword });
   };
+  
+  // ── Security Question ────────────────────────────────────────────
+// ── Security Question ────────────────────────────────────────────
+const [securityCurrentPassword, setSecurityCurrentPassword] = useState("");
+
+const {
+  data: securityQuestionData,
+  isLoading: securityQuestionLoading,
+} = useQuery({
+  queryKey: ["security-question"],
+  queryFn: async () => {
+    const res = await api.get<APIResponse>(
+      "/api/users/security-question"
+    );
+
+    return res.data.data as {
+      configured: boolean;
+      question: string | null;
+    };
+  },
+});
+
+useEffect(() => {
+  if (securityQuestionData?.question) {
+    setSecurityQuestion(securityQuestionData.question);
+  }
+}, [securityQuestionData]);
+
+const securityQuestionMutation = useMutation({
+  mutationFn: async (payload: {
+    question: string;
+    answer: string;
+    currentPassword: string;
+  }) => {
+    const res = await api.post<APIResponse>(
+      "/api/users/security-question",
+      payload
+    );
+
+    return res.data;
+  },
+
+onSuccess: () => {
+  toast.success("Security question saved successfully.");
+  setSecurityAnswer("");
+  setSecurityCurrentPassword("");
+  setEditingSecurityQuestion(false);
+
+  qc.invalidateQueries({
+    queryKey: ["security-question"],
+  });
+},
+
+  onError: (error) => {
+    toast.error(
+      axios.isAxiosError(error)
+        ? error.response?.data?.message ??
+            "Failed to save security question"
+        : "Failed to save security question"
+    );
+  },
+});
+
+const handleSaveSecurityQuestion = () => {
+  if (
+    !securityQuestion.trim() ||
+    !securityAnswer.trim() ||
+    !securityCurrentPassword.trim()
+  ) {
+    toast.error(
+      "Please enter the question, answer, and current password."
+    );
+    return;
+  }
+
+  securityQuestionMutation.mutate({
+    question: securityQuestion.trim(),
+    answer: securityAnswer.trim(),
+    currentPassword: securityCurrentPassword.trim(),
+  });
+};
 
   // ── Sessions ─────────────────────────────────────────────────────
   const { data: sessionsData, isLoading: sessionsLoading, isError: sessionsError } = useQuery({
@@ -198,6 +283,102 @@ export default function SecuritySettings() {
           </Button>
         </CardContent>
       </Card>
+
+{/* ── Security Question ── */}
+<Card>
+  <CardHeader>
+    <CardTitle className="text-base">Security Question</CardTitle>
+  </CardHeader>
+
+  <CardContent className="space-y-4">
+  {!securityQuestionData?.configured || editingSecurityQuestion ? (
+      <>
+        <p className="text-sm text-muted-foreground">
+          This question may be used to verify your identity when a
+          high-risk login is detected.
+        </p>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm text-muted-foreground">
+            Security question
+          </label>
+          <Input
+            type="text"
+            placeholder="e.g. What was the name of your first pet?"
+            value={securityQuestion}
+            onChange={(e) => setSecurityQuestion(e.target.value)}
+            disabled={securityQuestionLoading}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm text-muted-foreground">
+            Answer
+          </label>
+          <Input
+            type="password"
+            placeholder="Enter your answer"
+            value={securityAnswer}
+            onChange={(e) => setSecurityAnswer(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+
+<div className="flex flex-col gap-1.5">
+  <label className="text-sm text-muted-foreground">
+    Current password
+  </label>
+  <Input
+    type="password"
+    placeholder="Enter your current password"
+    value={securityCurrentPassword}
+    onChange={(e) => setSecurityCurrentPassword(e.target.value)}
+    autoComplete="current-password"
+  />
+</div>
+
+        <Button
+          onClick={handleSaveSecurityQuestion}
+          disabled={securityQuestionMutation.isPending}
+          className="w-full sm:w-auto"
+        >
+          {securityQuestionMutation.isPending
+            ? "Saving…"
+            : "Save Security Question"}
+        </Button>
+      </>
+    ) : (
+      <>
+        <p className="text-sm text-muted-foreground">
+          Your security question is configured and will be used when
+          a high-risk login is detected.
+        </p>
+
+        <div className="rounded-md border p-3">
+          <p className="text-sm text-muted-foreground">
+            Security question
+          </p>
+          <p className="text-sm mt-1">
+            {securityQuestionData.question}
+          </p>
+        </div>
+
+<Button
+  variant="outline"
+  onClick={() => {
+    setSecurityQuestion(securityQuestionData.question ?? "");
+    setSecurityAnswer("");
+    setSecurityCurrentPassword("");
+    setEditingSecurityQuestion(true);
+  }}
+>
+  Change Security Question
+</Button>
+
+      </>
+    )}
+  </CardContent>
+</Card>
 
       {/* ── Active Sessions ── */}
       <Card>

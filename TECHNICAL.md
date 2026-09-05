@@ -28,59 +28,83 @@ This document goes deeper into how the app is built. It covers the system archit
 
 ```
 .
-├── client/                     # React Router 7 (SSR) frontend
-│   ├── app/
-│   │   ├── components/         # UI + feature components (shadcn/ui, feature-specific)
-│   │   ├── hooks/              # React hooks (useMe, useStorageSync, use-mobile)
-│   │   ├── lib/                # axios instance, react-query config, types
-│   │   ├── routes/             # Route modules (one per URL)
-│   │   ├── root.tsx            # Root layout, providers, error boundary
-│   │   └── routes.ts           # Route definitions
-│   ├── .env.sample
-│   └── package.json
-└── server/                     # Express 5 REST API
-    ├── drizzle/                # Generated migration files
-    ├── src/
-    │   ├── controllers/        # Request handlers (one per resource)
-    │   ├── lib/                # Auth, DB client, Cloudinary, mail, helpers
-    │   ├── middlewares/        # verifyAuth, errorHandler, rateLimiter, noCache
-    │   ├── routers/            # Express routers (one per resource)
-    │   └── index.ts            # App entry point
-    ├── .env.sample
-    └── package.json
+├── client/                     # React Router 7 (SSR) frontend
+│   ├── app/
+│   │   ├── components/         # UI + feature components (shadcn/ui, feature-specific)
+│   │   ├── hooks/              # React hooks (useMe, useStorageSync,use-mobile)
+│   │   ├── lib/                # axios instance, react-query config, types
+│   │   ├── routes/             # Route modules (one per URL)
+│   │   ├── root.tsx            # Root layout, providers, error boundary
+│   │   └── routes.ts           # Route definitions
+│   ├── .env.sample
+│   └── package.json
+└── server/                     # Express 5 REST API
+    ├── drizzle/                # Generated migration files
+    ├── src/
+    │   ├── controllers/        # Request handlers (one per resource)
+    │   ├── lib/                # Auth, DB client, Cloudinary, mail, helpers
+    │   ├── middlewares/        # verifyAuth, errorHandler, rateLimiter, noCache
+    │   ├── routers/            # Express routers (one per resource)
+    │   └── index.ts            # App entry point
+    ├── .env.sample
+    └── package.json
+
 ```
 
 ## System Architecture
 
 The project is split into two independent Node.js applications:
 
-- **`client/`** — a React 19 + React Router 7 application running in **framework mode** (server-side rendering with HMR in dev). Vite builds the app and the React Router server renders pages. All data is fetched client-side via an Axios instance pointed at the backend.
-- **`server/`** — a stateless Express 5 REST API. It owns the Postgres database (via Drizzle ORM + Neon serverless driver), authentication (via Better Auth), file storage (Cloudinary), and transactional email (Nodemailer).
+- ****`client/`**** — a React 19 + React Router 7 application running in ****framework mode**** (server-side rendering with HMR in dev). Vite builds the app and the React Router server renders pages. All data is fetched client-side via an Axios instance pointed at the backend.
+
+- ****`server/`**** — a stateless Express 5 REST API. It owns the Postgres database (via Drizzle ORM + Neon serverless driver), authentication (via Better Auth), file storage (Cloudinary), and transactional email (Nodemailer).
 
 ```
+
 Browser
-  │  (React Router SSR HTML + JS)
-  ▼
+  │  (React Router SSR HTML + JS)
+  ▼
 Client (Vercel) ────── /api/* ──────► Server (DigitalOcean)
-  │                                        │
-  │  axios (withCredentials: true)         ├── Postgres (Neon)
-  └──────────────────────────────────────► │── Cloudinary (media)
-                                           └── SMTP (email)
+  │                                        │
+  │  axios (withCredentials: true)         ├── Postgres (Neon)
+  └──────────────────────────────────────► │── Cloudinary (media)
+                                           └── SMTP (email)
+
 ```
 
 Auth is cookie-based. The client's Axios instance sends `withCredentials: true`, and the server sets `Set-Cookie` headers from Better Auth responses. On a production HTTPS origin, cookies are marked `Secure` and `SameSite=None`; locally they are `SameSite=Lax` (`server/src/lib/auth.ts`).
+
+### Risk-Adaptive Authentication
+
+The sign-in flow includes a Risk-Adaptive Authentication (RAA) prototype. Before completing authentication, the sign-in controller evaluates four authentication signals:
+
+- **Failed attempts** — consecutive unsuccessful authentication attempts.
+- **New IP** — whether the login IP differs from the user's previously recorded authentication event.
+- **New device** — whether the login user agent differs from the user's previously recorded authentication event.
+- **Unusual login time** — whether the login occurs between 00:00 and 05:59.
+
+The rule-based risk engine assigns a score and classifies the login as LOW, MEDIUM, or HIGH.
+
+| Risk Level | Authentication Response |
+|---|---|
+| LOW | Normal authentication |
+| MEDIUM | Email OTP verification |
+| HIGH | Additional security challenge |
+
+The prototype also runs a Logistic Regression model using the same four signals. The ML assessment currently operates in shadow mode for comparison and does not control the authentication decision.
 
 ## Database Schema
 
 All tables are defined in two files:
 
 - `server/src/lib/auth-schema.ts` — generated by the Better Auth CLI (`npm run db:generate-auth`); holds `user`, `session`, `account`, and `verification` tables.
+
 - `server/src/lib/db/schema.ts` — all app-specific tables.
 
 ### App tables
 
 | Table | Purpose | Notable columns / constraints |
-| --- | --- | --- |
+|---|---|---|
 | `post` | Posts, comments, and quote posts | `parentPostId` (comment on post), `quotedPostId` (quote of a post), `visibility` (`public` / `followers`) |
 | `media` | Media attached to a post | `type` (`image` / `video`), `url`, `thumbnailUrl` |
 | `hashtag` | Unique hashtag names | `name` unique, stored lowercased |
@@ -95,61 +119,108 @@ All tables are defined in two files:
 
 All user-referencing tables use `ON DELETE CASCADE` on `user.id`, so deleting an account cleans up all related rows. `notification.postId` uses `ON DELETE SET NULL`.
 
+| `auth_risk_event` | Authentication risk events | `userId`, IP address, user agent, failed attempts, new IP, new device, unusual login time, risk score, risk level, success |
+
+### Authentication Risk Events
+
+`auth_risk_event` records authentication attempts and the signals used by the RAA prototype. Each event stores the authentication outcome, consecutive failed-attempt count, IP/device indicators, unusual-login-time indicator, risk score, and risk level. The `userId` references the Better Auth `user` table.
+
+
 ### Key relationships (`server/src/lib/db/schema.ts`)
 
 - `post` self-joins twice: `parentPost`/`comments` (comment threads) and `quotedPost`/`quotePosts` (quotes).
+
 - `post` has `one` author and `many` media, likes, reposts, bookmarks, postHashtags.
+
 - `like`, `repost`, `bookmark`, `follow`, `message`, and `notification` each relate back to `user`.
 
-Drizzle relational queries (`db.query.<table>.findMany({ with: {...} })`) are used throughout to eager-load nested data in a single round trip.
+Drizzle relational queries (`db.query.\<table>.findMany({ with: {...} })`) are used throughout to eager-load nested data in a single round trip.
 
 ## Authentication & Authorization
 
-Authentication is provided by [Better Auth](https://better-auth.com) with the **username** and **emailOTP** plugins, adapted to Drizzle (`server/src/lib/auth.ts`).
+Authentication is provided by [Better Auth](https://better-auth.com) with the ****username**** and ****emailOTP**** plugins, adapted to Drizzle (`server/src/lib/auth.ts`).
 
 - The Better Auth handler is mounted at `/api/auth/*` and passed through `toNodeHandler(auth)` (`server/src/index.ts:39`). This route is protected by `authLimiter` (10 req/min) and a `noCache` middleware.
+
 - `verifyAuth` (`server/src/middlewares/verifyAuth.ts`) calls `auth.api.getSession({ headers })`, attaches the session to `req.session`, and throws `401` when missing. Protected routers register it via `router.use(verifyAuth)`.
-- Sign-in supports **email or username** (`server/src/controllers/users.controller.ts`): the controller checks whether the identifier looks like an email and calls either `auth.api.signInEmail` or `auth.api.signUp/signInUsername`, forwarding `Set-Cookie` headers.
-- **Email verification** and **password reset** use OTP emails (6-digit codes) rendered by `sendVerificationOTP` in `auth.ts`. Controllers wrap `auth.api.sendVerificationOTP`, `checkVerificationOTP`, `verifyEmailOTP`, and `resetPasswordEmailOTP`.
+
+- Sign-in supports ****email or username**** (`server/src/controllers/users.controller.ts`): the controller checks whether the identifier looks like an email and calls either `auth.api.signInEmail` or `auth.api.signUp/signInUsername`, forwarding `Set-Cookie` headers.
+
+- ****Email verification**** and ****password reset**** use OTP emails (6-digit codes) rendered by `sendVerificationOTP` in `auth.ts`. Controllers wrap `auth.api.sendVerificationOTP`, `checkVerificationOTP`, `verifyEmailOTP`, and `resetPasswordEmailOTP`.
+
 - Unverified users cannot create posts — `createPost` rejects sessions where `emailVerified` is false.
-- **Session management** lives under `/api/settings/sessions` — users can list, revoke individual sessions, or sign out all other devices. Account deletion calls `auth.api.deleteUser` (requires password).
+
+- ****Session management**** lives under `/api/settings/sessions` — users can list, revoke individual sessions, or sign out all other devices. Account deletion calls `auth.api.deleteUser` (requires password).
 
 Server-side validation in `signup` enforces email format, a username regex (`[^\W][\w.]{0,29}`, no leading/trailing periods), and a password policy (8+ chars, upper + lower + digit).
+
+### Risk-Adaptive Authentication
+
+The user sign-in controller performs the RAA assessment using the four signals described above.
+
+- **LOW** — the authenticated session can proceed normally.
+- **MEDIUM** — the authenticated session is marked as pending and an email OTP is required.
+- **HIGH** — the authenticated session is marked as pending and an additional security challenge is required.
+
+Pending verification is tracked using an in-memory pending-authentication state. The OTP verification endpoint and high-risk security-challenge endpoint complete the pending state after successful verification and record a successful authentication event.
+
+Failed authentication attempts are recorded as risk events. Consecutive failed attempts are calculated by reading the user's recorded events backwards until the most recent successful authentication event.
+
+The prototype also calculates an ML risk assessment using the trained Logistic Regression model. This result is logged for comparison and does not currently determine the authentication response.
+
 
 ## Posts, Comments & Quotes
 
 A single `post` table represents three content types, distinguished by two nullable columns:
 
-- **Top-level post** — neither `parentPostId` nor `quotedPostId`.
-- **Comment / reply** — has `parentPostId`.
-- **Quote post** — has `quotedPostId` (and optionally a `parentPostId` too, if the quote is itself a reply).
+- ****Top-level post**** — neither `parentPostId` nor `quotedPostId`.
+
+- ****Comment / reply**** — has `parentPostId`.
+
+- ****Quote post**** — has `quotedPostId` (and optionally a `parentPostId` too, if the quote is itself a reply).
 
 ### Create post (`server/src/controllers/posts.controller.ts`)
 
 1. Verifies the session and that the user's email is verified.
+
 2. Validates `parentPostId`/`quotedPostId` if provided (404 if the referenced post is missing).
+
 3. Extracts hashtags and mentions from the content text.
-4. Inserts the post, then fires **side effects** (each wrapped in try/catch so a side-effect failure doesn't fail the request):
-   - Comment notification to the parent post's author.
-   - Quote notification to the quoted post's author.
-   - Hashtag rows (`onConflictDoNothing`) + `post_hashtag` links, resolving existing hashtag IDs.
-   - Mention notifications for users whose `username`/`displayUsername` matches.
-   - Media upload: if files are present, uploads each buffer to Cloudinary, then inserts `media` rows with `url` and generated `thumbnailUrl`.
+
+4. Inserts the post, then fires ****side effects**** (each wrapped in try/catch so a side-effect failure doesn't fail the request):
+
+   - Comment notification to the parent post's author.
+
+   - Quote notification to the quoted post's author.
+
+   - Hashtag rows (`onConflictDoNothing`) + `post_hashtag` links, resolving existing hashtag IDs.
+
+   - Mention notifications for users whose `username`/`displayUsername` matches.
+
+   - Media upload: if files are present, uploads each buffer to Cloudinary, then inserts `media` rows with `url` and generated `thumbnailUrl`.
 
 `POST /api/posts` uses `upload.array('media', 10)` with Multer memory storage and a 50 MB per-file limit.
 
 ### Delete post
 
-`deletePostByID` first verifies ownership, then uses a **recursive CTE** to collect every media row in the post's reply tree and deletes each asset from Cloudinary before deleting the post row:
+`deletePostByID` first verifies ownership, then uses a ****recursive CTE**** to collect every media row in the post's reply tree and deletes each asset from Cloudinary before deleting the post row:
 
 ```sql
+
 WITH RECURSIVE post_tree AS (
-  SELECT id FROM post WHERE id = :id
-  UNION ALL
-  SELECT p.id FROM post p
-  JOIN post_tree pt ON p.parent_post_id = pt.id
+
+  SELECT id FROM post WHERE id = :id
+
+  UNION ALL
+
+  SELECT p.id FROM post p
+
+  JOIN post_tree pt ON p.parent_post_id = pt.id
+
 )
+
 SELECT m.url, m.type FROM media m JOIN post_tree pt ON m.post_id = pt.id
+
 ```
 
 ### Post DTO (`server/src/lib/postDto.ts`)
@@ -158,36 +229,47 @@ SELECT m.url, m.type FROM media m JOIN post_tree pt ON m.post_id = pt.id
 
 ## Media Handling
 
-- **Upload** — Multer stores files in memory; each buffer is uploaded to Cloudinary via `uploadToCloudinary` with `resource_type: 'auto'` so images and videos are detected (`server/src/lib/cloudinary.ts`).
-- **Thumbnails** — `generateThumbnail` builds a Cloudinary URL with `crop: 'fill'`, `width: 400`, `height: 225`, `fetch_format: 'auto'`, `format: 'jpg'` for video/gallery previews.
-- **Delete** — `deleteFromCloudinary` derives the public ID from the URL and calls `cloudinary.uploader.destroy` with the correct resource type.
-- **Avatars** — profile pictures are uploaded the same way (signup and `updateUser`); on avatar replacement, the old image is deleted from Cloudinary.
+- ****Upload**** — Multer stores files in memory; each buffer is uploaded to Cloudinary via `uploadToCloudinary` with `resource_type: 'auto'` so images and videos are detected (`server/src/lib/cloudinary.ts`).
+
+- ****Thumbnails**** — `generateThumbnail` builds a Cloudinary URL with `crop: 'fill'`, `width: 400`, `height: 225`, `fetch_format: 'auto'`, `format: 'jpg'` for video/gallery previews.
+
+- ****Delete**** — `deleteFromCloudinary` derives the public ID from the URL and calls `cloudinary.uploader.destroy` with the correct resource type.
+
+- ****Avatars**** — profile pictures are uploaded the same way (signup and `updateUser`); on avatar replacement, the old image is deleted from Cloudinary.
 
 ## Hashtags & Mentions
 
 - `extractHashtags` (`server/src/lib/hashtags.ts`) matches `#tag` tokens (1–50 word chars), dedupes, and lowercases them. Post creation links each tag to the `hashtag`/`post_hashtag` tables.
+
 - `extractMentions` (`server/src/lib/mentions.ts`) matches `@username` tokens (1–30 alphanumeric/underscore chars), lowercases them, and resolves them against `username` and `displayUsername` (case-insensitive) to create mention notifications.
+
 - The client renders hashtags and mentions as links via `LinkifiedText.tsx`.
 
 ## Engagement (Likes, Reposts, Bookmarks)
 
-Each is a **toggle** endpoint that checks for an existing row and inserts or deletes it, returning the new state (`liked`, `reposted`, `bookmarked`). Unique constraints on `(userId, postId)` prevent duplicates; the controllers rely on an existence check first.
+Each is a ****toggle**** endpoint that checks for an existing row and inserts or deletes it, returning the new state (`liked`, `reposted`, `bookmarked`). Unique constraints on `(userId, postId)` prevent duplicates; the controllers rely on an existence check first.
 
 | Action | Toggle endpoint | Status endpoint | List endpoint |
+
 | --- | --- | --- | --- |
+
 | Like | `POST /api/likes/:postId/toggle` | `GET /api/likes/:postId/status` | `GET /api/likes/users/:id` |
+
 | Repost | `POST /api/repost/:postId/toggle` | `GET /api/repost/:postId/status` | — |
+
 | Bookmark | `POST /api/bookmarks/:postId/toggle` | `GET /api/bookmarks/:postId/status` | `GET /api/bookmarks` |
 
-- **Likes** also expose a count endpoint (`GET /api/likes/:postId/count`).
-- **Repost status** returns `true` if the user has a repost *or* a quote of the post (`reposts.controller.ts` `getRepostStatus`).
+- ****Likes**** also expose a count endpoint (`GET /api/likes/:postId/count`).
+
+- ****Repost status**** returns `true` if the user has a repost **or** a quote of the post (`reposts.controller.ts` `getRepostStatus`).
+
 - Creating a like, repost, or follow triggers a notification to the content owner via `createNotificationOnce` (suppressed when the actor is the owner).
 
 ## Follow System
 
 `toggleFollow` guards against following yourself, validates the target user exists, then toggles the `follow` row. Additional endpoints expose follower/following lists and counts and the current viewer's follow status (`server/src/controllers/follows.controller.ts`).
 
-The follow graph is also the backbone of the **Following feed** and the personalization signals in the **For You** feed.
+The follow graph is also the backbone of the ****Following feed**** and the personalization signals in the ****For You**** feed.
 
 ## Feed (Following & For You)
 
@@ -196,6 +278,7 @@ The follow graph is also the backbone of the **Following feed** and the personal
 ### Following feed
 
 - Fetches top-level posts from followed users and reposts by followed users, merges them, and sorts by `createdAt` descending.
+
 - Each item is tagged `{ itemType: 'post' | 'repost' }` so the client can render reposts differently.
 
 ### For You feed (personalized ranking)
@@ -203,22 +286,35 @@ The follow graph is also the backbone of the **Following feed** and the personal
 Builds a `ViewerFeedContext` from the viewer's follows, likes, bookmarks, reposts, comments, and own posts:
 
 - `followedUserIds` — who the viewer follows
+
 - `interactedPostIds` — posts the viewer has interacted with
+
 - `interactedAuthorIds` — authors the viewer engages with
+
 - `interestedHashtags` — hashtags from posts the viewer engaged with
 
 Candidates (last 200 top-level posts + last 200 reposts) are filtered by `visibility` (followers-only posts require the viewer to follow the author) and scored:
 
 | Signal | Weight |
+
 | --- | --- |
+
 | Recency (hours) | `max(0, 72 - ageHours)` |
+
 | Likes / Reposts | ×2 |
+
 | Comments | ×3 |
+
 | Following the author | +25 |
+
 | Previously interacted with author | +18 |
+
 | Matching hashtag interest | +12 each, capped at +36 |
+
 | A followed user engaged with the post | +8 |
+
 | Viewer's own post | −10 |
+
 | Viewer already interacted with the post | −15 |
 
 Items are sorted by score (then recency) and the top 50 are returned.
@@ -227,16 +323,19 @@ Items are sorted by score (then recency) and the top 50 are returned.
 
 ### Explore (`GET /api/explore`)
 
-- **Trending hashtags** — aggregate `post_hashtag` counts grouped by hashtag, ordered by count then `updatedAt`.
-- **Popular posts** — last 25 top-level posts scored by the same recency + engagement formula used in the feed; top 10 returned.
+- ****Trending hashtags**** — aggregate `post_hashtag` counts grouped by hashtag, ordered by count then `updatedAt`.
+
+- ****Popular posts**** — last 25 top-level posts scored by the same recency + engagement formula used in the feed; top 10 returned.
 
 ### Search (`GET /api/explore/search?q=...`)
 
 Runs three parallel searches:
 
-- **Users** — `ilike` against `name`, `username`, `displayUsername`, and `bio`, ranked by an SQL `CASE` that prioritizes exact matches, then prefix matches.
-- **Posts** — content `ilike` plus posts matching the hashtag IDs, restricted to top-level posts.
-- **Hashtags** — hashtags whose name matches, plus any hashtags found on matching posts, ranked by exact/prefix match then post count.
+- ****Users**** — `ilike` against `name`, `username`, `displayUsername`, and `bio`, ranked by an SQL `CASE` that prioritizes exact matches, then prefix matches.
+
+- ****Posts**** — content `ilike` plus posts matching the hashtag IDs, restricted to top-level posts.
+
+- ****Hashtags**** — hashtags whose name matches, plus any hashtags found on matching posts, ranked by exact/prefix match then post count.
 
 The result groups everything under `{ users, posts, hashtags }`. The client search route also has a dedicated user-only search (`GET /api/users/search?q=`).
 
@@ -251,9 +350,13 @@ Looks up the hashtag (lowercased), finds linked `postId`s, and returns the top-l
 `createNotificationOnce({ recipientId, actorId, type, postId })` is the single entry point used by likes, comments, reposts, follows, quotes, and mentions:
 
 1. Returns early if actor == recipient.
+
 2. Reads the recipient's `notification_preference` (falling back to defaults).
+
 3. Decides whether to create an in-app row and/or send an email based on per-type toggles (e.g. `inAppLikes`, `emailLikes`) and the master `emailEnabled` switch.
-4. **Deduplicates** in-app rows — inserts only if no existing row matches `(recipientId, actorId, type, postId)`.
+
+4. ****Deduplicates**** in-app rows — inserts only if no existing row matches `(recipientId, actorId, type, postId)`.
+
 5. For email, renders an HTML message with a link back to the app (`FRONTEND_URL`), including a post content preview.
 
 Default preferences: all in-app toggles on; `emailEnabled` on with comments, follows, quotes, and mentions on but likes and reposts off.
@@ -261,16 +364,20 @@ Default preferences: all in-app toggles on; `emailEnabled` on with comments, fol
 ### API (`server/src/controllers/notifications.controller.ts`)
 
 - `GET /api/notifications` — latest 100 for the viewer (with actor + post populated).
+
 - `GET /api/notifications/unread-count` — count of rows with `readAt IS NULL`.
+
 - `PATCH /api/notifications/:id/read`, `POST /api/notifications/read-all`, `DELETE /api/notifications/:id`.
 
 ## Messaging
 
 `server/src/controllers/messages.controller.ts` implements simple direct messaging (no realtime layer):
 
-- **Send** (`POST /api/messages`) — validates receiver + non-empty content, inserts the message (optionally a reply via `parentMessageId`), and returns the message with sender/receiver/parent populated.
-- **Conversations** (`GET /api/messages/conversations`) — fetches all messages involving the user and collapses them into a per-peer summary (other user + last message).
-- **History** (`GET /api/messages/:userId`) — the full chronological thread between the two users.
+- ****Send**** (`POST /api/messages`) — validates receiver + non-empty content, inserts the message (optionally a reply via `parentMessageId`), and returns the message with sender/receiver/parent populated.
+
+- ****Conversations**** (`GET /api/messages/conversations`) — fetches all messages involving the user and collapses them into a per-peer summary (other user + last message).
+
+- ****History**** (`GET /api/messages/:userId`) — the full chronological thread between the two users.
 
 The client polls/refetches on view (no WebSocket/SSE is used).
 
@@ -279,7 +386,9 @@ The client polls/refetches on view (no WebSocket/SSE is used).
 ### Profile
 
 - `GET /api/users/:username` resolves a user by `username`, `displayUsername`, or `name` (case-insensitive) — the `@` prefix is stripped.
+
 - `GET /api/users/:id/posts` and `/comments` return a user's posts and their comments (posts with a `parentPostId`).
+
 - `GET /api/users/:id/likes` returns the posts a user has liked.
 
 ### Profile editing (`updateUser`)
@@ -289,13 +398,21 @@ Writes `name`, `bio`, avatar (uploaded to Cloudinary, old one deleted), and opti
 ### Settings (`/api/settings`, all `verifyAuth` + `noCache`)
 
 | Endpoint | Purpose |
+
 | --- | --- |
+
 | `GET /sessions` | List sessions + current session id |
+
 | `DELETE /sessions/:id` | Revoke one session |
+
 | `DELETE /sessions` | Revoke all other sessions |
+
 | `DELETE /account` | Delete account (password required) |
+
 | `POST /change-password` | Change password (current + new) |
+
 | `GET /notifications` | Get notification preferences (defaults if none) |
+
 | `PATCH /notifications` | Upsert notification preferences |
 
 `updateNotificationSettings` only accepts the whitelisted preference keys and uses an insert-on-conflict to upsert.
@@ -305,140 +422,231 @@ Writes `name`, `bio`, avatar (uploaded to Cloudinary, old one deleted), and opti
 Every response is wrapped in `APIResponse` (`server/src/lib/apiResponse.ts`):
 
 ```json
+
 { "message": "...", "status": 200, "success": true, "data": {} }
+
 ```
 
 - Controllers throw `AppError(message, status)` for expected failures.
+
 - The central `errorHandler` (`server/src/middlewares/errorHandler.ts`) maps `AppError` and Better Auth `APIError` to their status, and sanitizes unexpected errors so internal messages (connection errors, DB constraint text, timeouts) are not leaked to clients.
+
 - Controllers wrap their bodies in try/catch and re-throw `AppError`s (or wrap unknown errors as 500).
 
 ## Security
 
-- **CORS** — only the configured `FRONTEND_URL` origin is allowed, with `credentials: true` (`server/src/index.ts`).
-- **Cookies** — `HttpOnly`, `SameSite=None` + `Secure` when the frontend origin is HTTPS, `SameSite=Lax` in development; 24-hour max age (`server/src/lib/auth.ts`).
-- **Rate limiting** (`server/src/middlewares/rateLimiter.ts`) — auth endpoints 10 req/min, feed 60 req/min, discovery 30 req/min.
-- **Env validation** — `validateEnvOrExit` aborts startup if any required variable is missing, and `getEnv` throws on missing keys at load time.
-- **Server-side validation** — email/username/password policies, content required for posts/messages, ownership checks for delete operations.
-- **No cache** on auth and settings endpoints (`noCache` middleware).
-- **Secrets** — `.env` files are git-ignored; only `.env.sample` placeholders are committed.
+- ****CORS**** — only the configured `FRONTEND_URL` origin is allowed, with `credentials: true` (`server/src/index.ts`).
+
+- ****Cookies**** — `HttpOnly`, `SameSite=None` + `Secure` when the frontend origin is HTTPS, `SameSite=Lax` in development; 24-hour max age (`server/src/lib/auth.ts`).
+
+- ****Rate limiting**** (`server/src/middlewares/rateLimiter.ts`) — auth endpoints 10 req/min, feed 60 req/min, discovery 30 req/min.
+
+- ****Env validation**** — `validateEnvOrExit` aborts startup if any required variable is missing, and `getEnv` throws on missing keys at load time.
+
+- ****Server-side validation**** — email/username/password policies, content required for posts/messages, ownership checks for delete operations.
+
+- ****No cache**** on auth and settings endpoints (`noCache` middleware).
+
+- ****Secrets**** — `.env` files are git-ignored; only `.env.sample` placeholders are committed.
 
 ## Client Data Layer
 
-- **Axios** (`client/app/lib/axios.ts`) — a shared instance with `baseURL: import.meta.env.VITE_BACKEND_URL` and `withCredentials: true`. When `VITE_BACKEND_URL` is unset (Vercel), the base URL is empty and requests go to the same origin under `/api/*`.
-- **TanStack Query** (`client/app/lib/react-query.ts`) — a global `QueryClient` (window-focus refetching disabled) plus a centralized `queryKeys` factory so cache keys are consistent (e.g. `["posts", "feed", tab]`, `["posts", "like-status", id]`).
-- **`useMe`** — fetches the current user session (`/api/users/me`) and is used by the sidebar, headers, and route guards.
-- **`useStorageSync`** — persists app state (theme, sidebar) to local storage.
-- **Route guards** — `ProtectedRoute` and `GuestRoute` gate authenticated vs. public routes.
-- **Form handling** — `react-hook-form` + `zod` for signup/signin/profile forms; `sonner` toasts for feedback.
+- ****Axios**** (`client/app/lib/axios.ts`) — a shared instance with `baseURL: import.meta.env.VITE_BACKEND_URL` and `withCredentials: true`. When `VITE_BACKEND_URL` is unset (Vercel), the base URL is empty and requests go to the same origin under `/api/*`.
+
+- ****TanStack Query**** (`client/app/lib/react-query.ts`) — a global `QueryClient` (window-focus refetching disabled) plus a centralized `queryKeys` factory so cache keys are consistent (e.g. `["posts", "feed", tab]`, `["posts", "like-status", id]`).
+
+- ****`useMe`**** — fetches the current user session (`/api/users/me`) and is used by the sidebar, headers, and route guards.
+
+- ****`useStorageSync`**** — persists app state (theme, sidebar) to local storage.
+
+- ****Route guards**** — `ProtectedRoute` and `GuestRoute` gate authenticated vs. public routes.
+
+- ****Form handling**** — `react-hook-form` + `zod` for signup/signin/profile forms; `sonner` toasts for feedback.
 
 ## API Reference
 
 All endpoints below are prefixed by the backend origin (`BACKEND_URL`).
 
 ### Auth (`/api/auth/*`) — Better Auth
+
 Managed by the framework; used through client-side helpers for sign-up, sign-in, OTP verification, password reset, and session management.
 
 ### Users (`/api/users`)
+
 | Method | Path | Auth | Purpose |
+
 | --- | --- | --- | --- |
+
 | GET | `/me` | ✔ | Current user session |
+
 | POST | `/signup` | — | Register (multipart, optional avatar) |
-| POST | `/signin` | — | Sign in with email or username |
+
+| POST | `/signin` | — | Sign in with email or username and perform risk assessment |
+
 | POST | `/logout` | ✔ | Sign out |
+| POST | `/signin/verify-otp` | — | Verify OTP for medium-risk sign-in |
+| POST | `/signin/verify-security` | — | Verify security challenge for high-risk sign-in |
+
 | PATCH | `/` | ✔ | Update profile (multipart, optional avatar) |
+
 | POST | `/send-email-verification-otp` | ✔ | Request email verification OTP |
+
 | POST | `/verify-email-otp` | ✔ | Verify email OTP |
+
 | POST | `/send-forget-password-otp` | — | Request password reset OTP |
+
 | POST | `/verify-forget-password-otp` | — | Reset password with OTP |
+
 | GET | `/search` | ✔ | Search users by name/username |
+
 | GET | `/:username` | — | Get user by username |
+
 | GET | `/:id/posts` | — | User's posts |
+
 | GET | `/:id/comments` | — | User's comments |
+
 | GET | `/:id/likes` | — | User's liked posts |
 
 ### Posts (`/api/posts`)
+
 | Method | Path | Auth | Purpose |
+
 | --- | --- | --- | --- |
+
 | POST | `/` | ✔ | Create post/comment/quote (multipart media) |
+
 | DELETE | `/:id` | ✔ | Delete post and its reply tree |
+
 | GET | `/:id` | — | Get post with comments |
+
 | GET | `/users/:id` | — | User's posts |
 
 ### Feed (`/api/feed`)
+
 | GET | `/for-you` | ✔ | Ranked personalized feed |
+
 | GET | `/following` | ✔ | Posts + reposts from followed users |
 
 ### Explore (`/api/explore`)
+
 | GET | `/` | — | Trending hashtags + popular posts |
+
 | GET | `/search` | — | Search users, posts, hashtags |
 
 ### Hashtags (`/api/hashtags`)
+
 | GET | `/:tag` | — | Posts for a hashtag |
+
 | GET | `/trending` | — | Trending hashtags |
 
 ### Follow (`/api/follow`)
+
 | Method | Path | Auth | Purpose |
+
 | --- | --- | --- | --- |
+
 | POST | `/:followingId/toggle` | ✔ | Follow / unfollow |
+
 | GET | `/:userId/followers` | — | Followers list |
+
 | GET | `/:userId/following` | — | Following list |
+
 | GET | `/:userId/followers/count` | — | Follower count |
+
 | GET | `/:userId/following/count` | — | Following count |
+
 | GET | `/:userId/status` | ✔ | Viewer's follow status |
 
 ### Likes (`/api/likes`)
+
 | POST | `/:postId/toggle` | ✔ | Like / unlike |
+
 | GET | `/:postId/count` | — | Like count |
+
 | GET | `/:postId/status` | ✔ | Viewer's like status |
+
 | GET | `/users/:id` | — | User's liked posts |
 
 ### Reposts (`/api/repost`)
+
 | POST | `/:postId/toggle` | ✔ | Repost / undo |
+
 | GET | `/:postId/status` | ✔ | Repost status (includes quotes) |
 
 ### Bookmarks (`/api/bookmarks`)
+
 | Method | Path | Auth | Purpose |
+
 | --- | --- | --- | --- |
+
 | POST | `/:postId/toggle` | ✔ | Bookmark / remove |
+
 | GET | `/:postId/status` | ✔ | Bookmark status |
+
 | GET | `/` | ✔ | My bookmarks |
 
 ### Messages (`/api/messages`)
+
 | POST | `/` | ✔ | Send message (optionally a reply) |
+
 | GET | `/conversations` | ✔ | Conversation list |
+
 | GET | `/:userId` | ✔ | Chat history |
 
 ### Notifications (`/api/notifications`)
+
 | Method | Path | Auth | Purpose |
+
 | --- | --- | --- | --- |
+
 | GET | `/` | ✔ | Latest 100 notifications |
+
 | GET | `/unread-count` | ✔ | Unread count |
+
 | PATCH | `/:id/read` | ✔ | Mark one read |
+
 | POST | `/read-all` | ✔ | Mark all read |
+
 | DELETE | `/:id` | ✔ | Delete a notification |
 
 ### Settings (`/api/settings`)
+
 | Method | Path | Purpose |
+
 | --- | --- | --- |
+
 | GET | `/sessions` | List sessions |
+
 | DELETE | `/sessions/:id` | Revoke one session |
+
 | DELETE | `/sessions` | Revoke all other sessions |
+
 | DELETE | `/account` | Delete account |
+
 | POST | `/change-password` | Change password |
+
 | GET | `/notifications` | Get notification preferences |
+
 | PATCH | `/notifications` | Update notification preferences |
 
 ## Testing & Tooling
 
-- **Server** — Jest with `ts-jest` and Supertest (`npm test`); ESLint + Prettier for linting (`npm run lint`).
-- **Client** — Vitest with Testing Library (`npm test`), `tsc` typecheck via `npm run typecheck`.
-- **Database** — Drizzle Kit: `db:push` (push schema), `db:generate` (generate migration), `db:migrate` (apply), `db:generate-auth` (regenerate Better Auth schema).
-- **Build** — Server compiles with `tsc` to `dist/` and runs via `node dist/src/index.js`; the client builds with `react-router build`.
+- ****Server**** — Jest with `ts-jest` and Supertest (`npm test`); ESLint + Prettier for linting (`npm run lint`).
+
+- ****Client**** — Vitest with Testing Library (`npm test`), `tsc` typecheck via `npm run typecheck`.
+
+- ****Database**** — Drizzle Kit: `db:push` (push schema), `db:generate` (generate migration), `db:migrate` (apply), `db:generate-auth` (regenerate Better Auth schema).
+
+- ****Build**** — Server compiles with `tsc` to `dist/` and runs via `node dist/src/index.js`; the client builds with `react-router build`.
 
 ## Known Architecture Notes
 
-- **Media upload flow is sequential per file** in `createPost` (`Promise.all` over uploads, but each file uploaded individually) — fine for a cap of 10 files; a stream/parallel approach with fewer buffered files could reduce memory under load.
-- **For You feed** loads up to 200 candidates per request and scores in JS; this is a simple, effective ranking but does not scale to very large post volumes without moving scoring into SQL.
-- **Messaging is polling-based**; realtime features (WebSockets, unread counts, typing indicators) would be a natural extension.
-- The **`signup` controller logs the request body** (`console.log('BODY ::: ', req.body)`) — worth removing before production since it could leak passwords in logs.
-- The **feed `for-you` route** calls `auth.api.getSession` directly instead of using the `verifyAuth` middleware, so it can keep the "login optional" path if needed later.
+- ****Media upload flow is sequential per file**** in `createPost` (`Promise.all` over uploads, but each file uploaded individually) — fine for a cap of 10 files; a stream/parallel approach with fewer buffered files could reduce memory under load.
+
+- ****For You feed**** loads up to 200 candidates per request and scores in JS; this is a simple, effective ranking but does not scale to very large post volumes without moving scoring into SQL.
+
+- ****Messaging is polling-based****; realtime features (WebSockets, unread counts, typing indicators) would be a natural extension.
+
+- The ****`signup` controller logs the request body**** (`console.log('BODY ::: ', req.body)`) — worth removing before production since it could leak passwords in logs.
+
+- The ****feed `for-you` route**** calls `auth.api.getSession` directly instead of using the `verifyAuth` middleware, so it can keep the "login optional" path if needed later.

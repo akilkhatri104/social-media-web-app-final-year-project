@@ -54,6 +54,7 @@
 | Explore/Search | mostly uses `post`, `user`, `hashtag`, interaction counts |
 | Recommendation | `userActivity`, possibly computed from `like`, `bookmark`, `follow`, `postHashtag` |
 | Multi-tenancy | `university`, `user.universityId`, `post.universityId` |
+| Risk-Adaptive Authentication | `auth_risk_event` |
 
 ## Person 1: Settings
 
@@ -72,6 +73,7 @@ Build a `/settings` section with account and security controls.
 | Revoke sessions | Allow logging out from other devices |
 | Delete account | Confirm password, delete or soft-delete user account |
 | Notification preferences | Basic UI shell if Person 2 adds preferences |
+| Risk-Adaptive Authentication | Assess login risk and dynamically require normal authentication, email OTP, or an additional security challenge |
 
 ### Backend Tasks
 
@@ -82,6 +84,9 @@ Build a `/settings` section with account and security controls.
 | `DELETE /api/settings/sessions` | Revoke all other sessions |
 | `DELETE /api/settings/account` | Delete account |
 | Better Auth route | Change password if already supported by Better Auth |
+| `POST /api/users/signin` | Perform authentication risk assessment during sign-in |
+| `POST /api/users/signin/verify-otp` | Verify OTP for medium-risk sign-in |
+| `POST /api/users/signin/verify-security` | Verify the additional security challenge for high-risk sign-in |
 
 ### Frontend Tasks
 
@@ -91,6 +96,26 @@ Build a `/settings` section with account and security controls.
 | `/settings/profile` | Existing edit profile page |
 | `/settings/security` | Password and sessions |
 | `/settings/account` | Delete account |
+| Sign-in flow | Display OTP verification for medium-risk authentication and an additional security challenge for high-risk authentication |
+
+### Risk Assessment
+
+The RAA prototype uses the following authentication signals:
+
+| Signal | Description |
+|---|---|
+| Failed attempts | Consecutive unsuccessful authentication attempts |
+| New IP | Login originates from a different IP address |
+| New device | Login originates from a different user agent |
+| Unusual login time | Login occurs between 00:00 and 05:59 |
+
+| Risk Level | Authentication Response |
+|---|---|
+| LOW | Normal authentication |
+| MEDIUM | Email OTP verification |
+| HIGH | Additional security challenge |
+
+The prototype also evaluates the same signals using Logistic Regression. The ML model currently runs in shadow mode and does not control the authentication decision.
 
 ### Deadline
 
@@ -320,6 +345,7 @@ Start simple and explainable.
 |---|---|---|
 | Multi-tenancy foundation | Person 4 | Day 10 |
 | Settings page | Person 1 | Day 17 |
+| Risk-Adaptive Authentication | Person 1 | Day 24 |
 | Notifications | Person 2 | Day 18 |
 | Hashtags | Person 3 | Day 18 |
 | Explore | Person 3 | Day 22 |
@@ -335,15 +361,16 @@ Start simple and explainable.
 |---|---|
 | 1 | Multi-tenancy |
 | 2 | Settings/security |
-| 3 | Hashtags |
-| 4 | Search |
-| 5 | Notifications |
-| 6 | Explore |
-| 7 | Recommendation feed |
-| 8 | DMs |
-| 9 | Group chats/voice/video |
+| 3 | Risk-Adaptive Authentication |
+| 4 | Hashtags |
+| 5 | Search |
+| 6 | Notifications |
+| 7 | Explore |
+| 8 | Recommendation feed |
+| 9 | DMs |
+| 10 | Group chats/voice/video |
 
-DMs are valuable, but multi-tenancy, search, hashtags, and notifications affect the core app more directly and should be finished first.
+DMs are valuable, but multi-tenancy, search, hashtags, notifications, and authentication/security affect the core app more directly and should be finished first.
 
 ## Risks
 
@@ -355,6 +382,8 @@ DMs are valuable, but multi-tenancy, search, hashtags, and notifications affect 
 | Notification spam | Do not notify users for their own actions |
 | Search performance | Start with `ILIKE`; add indexes/full-text search later if needed |
 | Hashtag parsing edge cases | Use one shared parser function on backend |
+| RAA adds authentication friction | Use adaptive verification so only higher-risk logins require additional steps |
+| RAA model performs poorly | Keep the rule-based assessment as the active decision mechanism and use ML in shadow mode for comparison |
 
 ## Final Deliverable By End Of Month
 
@@ -363,6 +392,7 @@ The application should have:
 | Area | Expected Result |
 |---|---|
 | Settings | Account, password, sessions, delete account |
+| Authentication security | Risk-adaptive authentication with LOW, MEDIUM, and HIGH risk responses |
 | Notifications | Inbox for likes, comments, follows, reposts, quotes |
 | DMs | Basic one-to-one messaging |
 | Hashtags | Parsed, stored, clickable, hashtag feed |

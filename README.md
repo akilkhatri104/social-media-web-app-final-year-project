@@ -2,19 +2,20 @@
 
 A social media web application for college students and faculties to connect and socialize.
 
+The application also includes a **Risk-Adaptive Authentication (RAA)** prototype that evaluates authentication risk using failed login attempts, new IP address, new device, and unusual login time. Based on the assessed risk, the authentication requirements are dynamically increased for higher-risk lo gin attempts.
+
 ## Run Locally
 
 Clone the project
 
 ```bash
-  git clone https://github.com/akilkhatri104/social-media-web-app-final-year-project
+git clone https://github.com/akilkhatri104/social-media-web-app-final-year-project
 ```
 
 Go to the project directory
 
 ```bash
-  cd social-media-web-app-final-year-project
-
+cd social-media-web-app-final-year-project
 ```
 
 ### Client
@@ -22,8 +23,7 @@ Go to the project directory
 Go to the client directory
 
 ```bash
-  cd client
-
+cd client
 ```
 
 Install the dependencies:
@@ -32,7 +32,7 @@ Install the dependencies:
 npm install
 ```
 
-Copy `.env-sample` and paste into `.env`, set all the values requiered
+Copy `.env-sample` and paste it into `.env`, then set all the required values.
 
 ### Development
 
@@ -57,34 +57,35 @@ npm run build
 Go to the server directory
 
 ```bash
-  cd server
-
+cd server
 ```
 
 Install dependencies
 
 ```bash
-  npm install
+npm install
 ```
 
-Copy `.env-sample` and paste into `.env`, set all the values requiered
+Copy `.env-sample` and paste it into `.env`, then set all the required values.
 
-Create tables in the database based on `server\src\lib\db\schema.ts` and `server\src\lib\auth-schema.ts`
+Create the database tables based on `server/src/lib/db/schema.ts` and `server/src/lib/auth-schema.ts`
 
 ```bash
-  npm run db:push
+npm run db:push
 ```
+
+The database schema also includes the `auth_risk_event` table used to record authentication risk signals, risk scores, risk levels, and authentication outcomes for the Risk-Adaptive Authentication prototype.
 
 Start the server
 
 ```bash
-    npm run dev
+npm run dev
 ```
 
 OR
 
 ```bash
-    npm run start
+npm run start
 ```
 
 OR
@@ -92,14 +93,14 @@ OR
 Build for production
 
 ```bash
-    npm run build
+npm run build
 ```
 
 ## Environment Variables
 
-To run this project, you will need to add the following environment variables to your .env file
+To run this project, you will need to add the following environment variables to your `.env` file.
 
-### `client/.env
+### `client/.env`
 
 `VITE_BACKEND_URL` : URL of the backend
 
@@ -123,15 +124,15 @@ Set this to the exact DigitalOcean API origin, with no trailing slash.
 
 `BETTER_AUTH_SECRET` : A secret value used for encryption and hashing. It must be at least 32 characters and generated with high entropy.
 
-`CLOUDINARY_CLOUD_NAME` : Cloud name from your Cloudinary envrionment
+`CLOUDINARY_CLOUD_NAME` : Cloud name from your Cloudinary environment
 
-`CLOUDINARY_API_KEY` : API key for your Cloudinary envrionment
+`CLOUDINARY_API_KEY` : API key for your Cloudinary environment
 
-`CLOUDINARY_API_SECRET` : API Secret for your Cloudinary api key
+`CLOUDINARY_API_SECRET` : API Secret for your Cloudinary API key
 
-`SMTP_HOST` : Host URL of your SMTP service (ie. Brevo,MailTrap)
+`SMTP_HOST` : Host URL of your SMTP service (e.g. Brevo, Mailtrap)
 
-`SMTP_PORT` : SMTP port of the service (ie. 587)
+`SMTP_PORT` : SMTP port of the service (e.g. 587)
 
 `SMTP_USERNAME` : Username of the SMTP service
 
@@ -140,3 +141,5 @@ Set this to the exact DigitalOcean API origin, with no trailing slash.
 `SMTP_FROM_EMAIL` : Email of the SMTP sender
 
 `SMTP_FROM_NAME` : Name of the sender
+
+`HIGH_RISK_SECURITY_ANSWER` : Answer used for the additional security challenge for high-risk authentication.

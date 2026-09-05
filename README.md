@@ -1,240 +1,126 @@
 # Social Media Web Application for College Students
 
-A social media web application for college students and faculties to connect and socialize.
+A social media web application for college students and faculty to connect, communicate, and socialize.
+
+## Features
+
+### Authentication
+- Sign up and sign in using username and email
+- Email OTP verification
+- Forgot/reset password
+- Secure session management using Better Auth
+- Risk-Adaptive Authentication based on login context
+
+### Risk-Adaptive Authentication
+The application evaluates authentication risk using contextual login signals:
+
+- Consecutive failed login attempts
+- New IP address
+- New device
+- Unusual login time
+
+Authentication is dynamically adapted based on the calculated risk level:
 
-**## Features**
+| Risk Level | Authentication Requirement |
+| --- | --- |
+| **LOW** | Normal login |
+| **MEDIUM** | Email OTP verification |
+| **HIGH** | Additional security verification |
+
+For HIGH-risk authentication, users can configure a personal security question and answer from their security settings.
+
+Security questions have the following protections:
+
+- Answers are securely hashed using `scrypt`
+- Answers are never stored in plaintext
+- Changing a security question requires the user's current password
+- Users without a configured security question fall back to email OTP verification
+
+A Logistic Regression model is evaluated in shadow mode alongside the rule-based system and does not currently control authentication decisions.
+
+### Social Features
+- **Feed** – Home timeline of posts from people you follow
+- **Posts** – Create text posts with image/video uploads, edit, and delete
+- **Engagement** – Like, comment, repost, quote-post, and bookmark posts
+- **Follow System** – Follow/unfollow users and view follower/following counts
+- **Profiles** – Public user profiles with bio and avatar
+- **Explore & Discovery** – Trending posts, hashtag pages, and discoverable content
+- **Search** – Search users, posts, and hashtags
+- **Hashtags** – Automatic hashtag linking and dedicated hashtag feeds
+- **Notifications** – In-app notifications with per-type preferences and optional email notifications
+- **Messaging** – Direct messaging between users
+
+### User Experience
+- **Settings** – Account, security, notification preferences, and security question management
+- **Dark Mode** – Light/dark theme toggle
+- **Responsive UI** – Tailwind CSS and shadcn/ui components
+
+## Tech Stack
+
+### Client
+
+Located in `client/`.
+
+- **React 19**
+- **React Router 7**
+- **TypeScript**
+- **Vite 7**
+- **Tailwind CSS 4**
+- **shadcn/ui**
+- **TanStack React Query**
+- **Axios**
+- **react-hook-form** + **zod**
+- **sonner**
+- **next-themes**
+- **lucide-react**
+- **Vitest** + **Testing Library**
+
+### Server
+
+Located in `server/`.
+
+- **Node.js**
+- **Express 5**
+- **TypeScript**
+- **Better Auth**
+- **Drizzle ORM**
+- **drizzle-kit**
+- **Neon Serverless PostgreSQL**
+- **Cloudinary**
+- **Multer**
+- **Nodemailer**
+- **express-rate-limit**
+- **Jest** + **Supertest**
+
+### Risk-Adaptive Authentication / ML
+
+- **Python**
+- **scikit-learn**
+- **Logistic Regression**
+- **Decision Tree**
+- **JSON model artifact**
+- **Synthetic authentication dataset**
+
+## Authentication Risk Assessment
 
-\- **\*\*Authentication\*\*** – Sign up / sign in with username & email, email OTP verification, forgot/reset password, secure session cookies via [Better Auth]\([https://better-auth.com](https://better-auth.com)), and risk-adaptive authentication based on login context.
+The RAA prototype combines authentication context signals to calculate a risk level.
 
-\- **\*\*Risk-Adaptive Authentication\*\*** – Evaluates authentication risk using consecutive failed attempts, new IP address, new device, and unusual login time. LOW-risk logins continue normally, MEDIUM-risk logins require email OTP verification, and HIGH-risk logins require an additional security challenge. A Logistic Regression model is also evaluated in shadow mode for comparison.
+### Rule-Based Assessment
 
-\- **\*\*Feed\*\*** – Home timeline of posts from people you follow
+The current authentication decision is controlled by the rule-based risk assessment.
 
-\- **\*\*Posts\*\*** – Create text posts with image/video upload, edit, and delete
+Signals include:
 
-\- **\*\*Engagement\*\*** – Like, comment, repost, quote-post, and bookmark posts
+- Failed login attempts
+- IP address changes
+- Device changes
+- Login time anomalies
 
-\- **\*\*Follow system\*\*** – Follow/unfollow users and see follower/following counts
+The resulting risk level determines the authentication step required.
 
-\- **\*\*Profiles\*\*** – Public user profiles (\`/@username\`) with bio and avatar
+### ML Evaluation
 
-\- **\*\*Explore & Discovery\*\*** – Explore tab with trending posts, hashtag pages, and discoverable content
-
-\- **\*\*Search\*\*** – Search for users, posts, and hashtags
-
-\- **\*\*Hashtags\*\*** – Auto-linking and dedicated hashtag feeds
-
-\- **\*\*Notifications\*\*** – In-app notifications with per-type preferences plus optional email notifications
-
-\- **\*\*Messaging\*\*** – Direct messages between users
-
-\- **\*\*Settings\*\*** – Account, security, and notification preferences
-
-\- **\*\*Dark mode\*\*** – Light/dark theme toggle
-
-\- **\*\*Responsive UI\*\*** – Built with Tailwind CSS and shadcn/ui components
-
-**## Tech Stack**
-
-**### Client (\`client/\`)**
-
-\- **\*\*React 19\*\*** with **\*\*React Router 7\*\*** (framework mode, SSR + HMR)
-
-\- **\*\*TypeScript\*\***
-
-\- **\*\*Vite 7\*\*** build tooling
-
-\- **\*\*Tailwind CSS 4\*\*** + **\*\*shadcn/ui\*\*** (Radix UI / Base UI)
-
-\- **\*\*TanStack React Query\*\*** for server state
-
-\- **\*\*Axios\*\*** for API calls
-
-\- **\*\*react-hook-form\*\*** + **\*\*zod\*\*** for forms and validation
-
-\- **\*\*sonner\*\*** for toasts, **\*\*next-themes\*\*** for theming, **\*\*lucide-react\*\*** for icons
-
-\- **\*\*Vitest\*\*** + **\*\*Testing Library\*\*** for tests
-
-**### Server (\`server/\`)**
-
-\- **\*\*Node.js\*\*** with **\*\*Express 5\*\***
-
-\- **\*\*TypeScript\*\*** (run with \`tsx\`, compiled with \`tsc\`)
-
-\- **\*\*Better Auth\*\*** for authentication (username + email OTP plugins, Drizzle adapter)
-
-\- **\*\*Drizzle ORM\*\*** + **\*\*drizzle-kit\*\*** for schema and migrations
-
-\- **\*\*Neon\*\*** (Postgres, serverless driver)
-
-\- **\*\*Cloudinary\*\*** for media storage and thumbnail generation
-
-\- **\*\*Multer\*\*** for file uploads
-
-\- **\*\*Nodemailer\*\*** for transactional/notification emails
-
-\- **\*\*express-rate-limit\*\*** for API rate limiting
-
-\- **\*\*Jest\*\*** + **\*\*Supertest\*\*** for tests
-
-**### Risk-Adaptive Authentication / ML**
-
-\- **\*\*Python\*\*** for authentication risk model training and evaluation
-
-\- **\*\*scikit-learn\*\*** for Logistic Regression and Decision Tree evaluation
-
-\- **\*\*JSON model artifact\*\*** for loading the trained Logistic Regression model into the server
-
-**## Documentation**
-
-\- **\*\*Architecture & feature implementation details\*\*** – see [TECHNICAL.md]\(./TECHNICAL.md)
-
-\- **\*\*Project roadmap\*\*** – see [ROADMAP.md]\(./ROADMAP.md)
-
-**## Run Locally**
-
-**### Prerequisites**
-
-\- Node.js 20+
-
-\- npm
-
-\- Python 3+
-
-\- A Postgres database (e.g. [Neon]\([https://neon.tech](https://neon.tech)))
-
-\- A [Cloudinary]\([https://cloudinary.com](https://cloudinary.com)) account
-
-\- An SMTP provider (e.g. Brevo, Mailtrap)
-
-**### 1. Clone and install**
-
-\`\`\`bash
-
-git clone [https://github.com/akilkhatri104/social-media-web-app-final-year-project](https://github.com/akilkhatri104/social-media-web-app-final-year-project)
-
-cd social-media-web-app-final-year-project
-
-\`\`\`
-
-**### 2. Server**
-
-\`\`\`bash
-
-cd server
-
-npm install
-
-\`\`\`
-
-Copy \`.env.sample\` to \`.env\` and fill in the required values (see [Environment Variables]\(#environment-variables)):
-
-\`\`\`bash
-
-cp .env.sample .env
-
-\`\`\`
-
-Create the database tables based on \`server/src/lib/db/schema.ts\` and \`server/src/lib/auth-schema.ts\`:
-
-\`\`\`bash
-
-npm run db\:push
-
-\`\`\`
-
-The database schema includes the \`auth\_risk\_event\` table used to record authentication risk signals, risk scores, risk levels, and authentication outcomes.
-
-Start the development server:
-
-\`\`\`bash
-
-npm run dev
-
-\`\`\`
-
-The server will run at \`[http://localhost:8000](http://localhost:8000)\`.
-
-**### 3. Client**
-
-In a new terminal:
-
-\`\`\`bash
-
-cd client
-
-npm install
-
-\`\`\`
-
-Copy \`.env.sample\` to \`.env\` and set the values:
-
-\`\`\`bash
-
-cp .env.sample .env
-
-\`\`\`
-
-Start the development server:
-
-\`\`\`bash
-
-npm run dev
-
-\`\`\`
-
-The app will be available at \`[http://localhost:5173](http://localhost:5173)\`.
-
-**## Building for Production**
-
-**### Client**
-
-\`\`\`bash
-
-cd client
-
-npm run build
-
-\`\`\`
-
-**### Server**
-
-\`\`\`bash
-
-cd server
-
-npm run build
-
-npm run start
-
-\`\`\`
-
-**## Testing**
-
-**### Client**
-
-\`\`\`bash
-
-cd client
-
-npm run test
-
-\`\`\`
-
-**### Server**
-
-\`\`\`bash
-
-cd server
-
-npm run test
-
-\`\`\`
-
-**### Risk-Adaptive Authentication**
-
-The RAA prototype was tested across LOW, MEDIUM, and HIGH authentication flows. The ML evaluation uses a synthetic dataset of 150 authentication events and compares Logistic Regression, Decision Tree, and the rule-based risk assessment.
+A synthetic dataset containing **150 authentication events** was used to compare the rule-based approach with two machine-learning models.
 
 | Approach | Accuracy |
 | --- | ---: |
@@ -242,88 +128,240 @@ The RAA prototype was tested across LOW, MEDIUM, and HIGH authentication flows. 
 | Decision Tree | 0.605 |
 | Rule-Based | 0.607 |
 
-The Logistic Regression model currently operates in shadow mode and does not control the authentication decision. The dataset is synthetic and is intended for prototype evaluation rather than production security validation.
+The Logistic Regression model currently operates in **shadow mode**. It is evaluated against the rule-based approach but does not control authentication decisions.
 
-**## Linting**
+The dataset is synthetic and is intended for prototype and research evaluation rather than production security validation.
 
-\`\`\`bash
+## Database
 
+The application uses PostgreSQL through Neon and Drizzle ORM.
+
+### `auth_risk_event`
+
+Stores authentication risk events including:
+
+- Authentication risk signals
+- Risk scores
+- Risk levels
+- Authentication outcomes
+
+### `security_question`
+
+Stores user-configured security questions and securely hashed answers.
+
+The answer is stored using:
+
+- `scrypt` password hashing
+- Random per-user salt
+- Timing-safe hash comparison during verification
+
+## Documentation
+
+- **Architecture and implementation details** – [TECHNICAL.md](./TECHNICAL.md)
+- **Project roadmap** – [ROADMAP.md](./ROADMAP.md)
+- **Development tasks** – [TODO.md](./TODO.md)
+
+## Run Locally
+
+### Prerequisites
+
+- Node.js 20+
+- npm
+- Python 3+
+- PostgreSQL database, such as Neon
+- Cloudinary account
+- SMTP provider such as Brevo or Mailtrap
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/akilkhatri104/social-media-web-app-final-year-project
+cd social-media-web-app-final-year-project
+```
+
+### 2. Set up the server
+
+```bash
 cd server
+npm install
+```
 
+Copy the environment template:
+
+```bash
+cp .env.sample .env
+```
+
+Configure the required environment variables.
+
+Create/update the database schema:
+
+```bash
+npm run db:push
+```
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+The server runs at:
+
+```text
+http://localhost:8000
+```
+
+### 3. Set up the client
+
+Open a new terminal:
+
+```bash
+cd client
+npm install
+```
+
+Copy the environment template:
+
+```bash
+cp .env.sample .env
+```
+
+Configure the required environment variables.
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+The application runs at:
+
+```text
+http://localhost:5173
+```
+
+## Building for Production
+
+### Client
+
+```bash
+cd client
+npm run build
+```
+
+### Server
+
+```bash
+cd server
+npm run build
+npm run start
+```
+
+## Testing
+
+### Client
+
+```bash
+cd client
+npm run test
+```
+
+### Server
+
+```bash
+cd server
+npm run test
+```
+
+### Risk-Adaptive Authentication
+
+The RAA implementation has been tested across:
+
+- LOW-risk authentication
+- MEDIUM-risk authentication with email OTP
+- HIGH-risk authentication with security challenge
+- Incorrect security answers
+- Users without configured security questions
+- Security question creation
+- Security question persistence after reload
+- Security question changes requiring the current password
+
+## Linting
+
+```bash
+cd server
 npm run lint
+```
 
-\`\`\`
+## Database Migrations
 
-**## Database Migrations**
+Generate a migration after making schema changes:
 
-Generate a migration after schema changes:
-
-\`\`\`bash
-
-npm run db\:generate
-
-\`\`\`
+```bash
+npm run db:generate
+```
 
 Apply migrations:
 
-\`\`\`bash
+```bash
+npm run db:migrate
+```
 
-npm run db\:migrate
+Regenerate the Better Auth schema after authentication schema changes:
 
-\`\`\`
+```bash
+npm run db:generate-auth
+```
 
-Regenerate the Better Auth schema after auth changes:
+## Environment Variables
 
-\`\`\`bash
+The application requires environment variables for the client and server.
 
-npm run db\:generate-auth
+### `client/.env`
 
-\`\`\`
+`VITE_BACKEND_URL` – URL of the backend.
 
-**## Environment Variables**
+`VITE_FRONTEND_URL` – URL of the frontend.
 
-To run this project, you will need to add the following environment variables to your \`.env\` files.
+For Vercel deployments, leave `VITE_BACKEND_URL` unset so the client uses same-origin `/api/*` requests and Vercel rewrites them to the backend.
 
-**### \`client/.env\`**
+### `server/.env`
 
-\`VITE\_BACKEND\_URL\` : URL of the backend
+`PORT` – Port at which the server runs locally. Default: `8000`.
 
-\`VITE\_FRONTEND\_URL\` : URL of the frontend
+`FRONTEND_URL` – Base URL of the frontend.
 
-For Vercel deployments, leave \`VITE\_BACKEND\_URL\` unset so the client uses same-origin \`/api/\*\` requests and Vercel rewrites them to the backend.
+Set this to the exact production Vercel URL used by users, without a trailing slash.
 
-**### \`server/.env\`**
+`BACKEND_URL` – Base URL of the backend.
 
-\`PORT\` : Port at which the server will run on localhost (default \`8000\`)
+Set this to the exact DigitalOcean API origin, without a trailing slash.
 
-\`FRONTEND\_URL\` : Base URL of your frontend
+`DATABASE_URL` – PostgreSQL database connection string.
 
-Set this to the exact production Vercel URL used by users, with no trailing slash.
+`BETTER_AUTH_SECRET` – Secret used by Better Auth for encryption and hashing. It must be at least 32 characters and generated with high entropy.
 
-\`BACKEND\_URL\` : Base URL of your backend
+Example:
 
-Set this to the exact DigitalOcean API origin, with no trailing slash.
+```bash
+openssl rand -base64 32
+```
 
-\`DATABASE\_URL\` : Connection string for the Postgres database
+`CLOUDINARY_CLOUD_NAME` – Cloudinary cloud name.
 
-\`BETTER\_AUTH\_SECRET\` : A secret value used for encryption and hashing. It must be at least 32 characters and generated with high entropy. Generate one with \`openssl rand -base64 32\`.
+`CLOUDINARY_API_KEY` – Cloudinary API key.
 
-\`CLOUDINARY\_CLOUD\_NAME\` : Cloud name from your Cloudinary environment
+`CLOUDINARY_API_SECRET` – Cloudinary API secret.
 
-\`CLOUDINARY\_API\_KEY\` : API key for your Cloudinary environment
+`SMTP_HOST` – SMTP service host.
 
-\`CLOUDINARY\_API\_SECRET\` : API Secret for your Cloudinary API key
+`SMTP_PORT` – SMTP service port, such as `587`.
 
-\`SMTP\_HOST\` : Host URL of your SMTP service (e.g. Brevo, Mailtrap)
+`SMTP_USERNAME` – SMTP service username.
 
-\`SMTP\_PORT\` : SMTP port of the service (e.g. 587)
+`SMTP_PASSWORD` – SMTP service password.
 
-\`SMTP\_USERNAME\` : Username of the SMTP service
+`SMTP_FROM_NAME` – Sender display name.
 
-\`SMTP\_PASSWORD\` : Password for the SMTP service
-
-\`SMTP\_FROM\_NAME\` : Name of the sender
-
-\`SMTP\_FROM\_EMAIL\` : Email of the SMTP sender
-
-\`HIGH\_RISK\_SECURITY\_ANSWER\` : Answer used for the additional security challenge for high-risk authentication.
+`SMTP_FROM_EMAIL` – Sender email address.

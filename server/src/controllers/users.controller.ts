@@ -7,7 +7,7 @@ import { db } from '../lib/db/client.ts';
 import { user } from '../lib/auth-schema.ts';
 import { eq, and, not, or, ilike, count, gte } from 'drizzle-orm';
 import { APIError } from 'better-auth';
-import { authRiskEvent } from '../lib/db/schema.ts';
+import { authRiskEvent, securityQuestion } from '../lib/db/schema.ts';
 import { assessRisk } from '../lib/riskAssessment.ts';
 import {
   markPendingMFA,
@@ -16,6 +16,7 @@ import {
 } from '../lib/pendingMFA.ts';
 import { session } from "../lib/auth-schema.ts";
 import { assessMLRisk } from '../lib/mlRiskAssessment.js';
+import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
 export async function me(req: Request, res: Response) {
   if (!req.session?.user) {
@@ -185,48 +186,96 @@ export async function signin(req: Request, res: Response) {
     }
 
     /*
-     * HIGH RISK
-     *
-     * Password is correct, but the authentication context is risky.
-     * Require an additional security challenge instead of blocking login.
-     */
-    if (riskAssessment.level === 'HIGH') {
-      const sessionToken = response.response?.token;
+ * HIGH RISK
+ *
+ * Password is correct, but the authentication context is risky.
+ * Require the user's configured security question.
+ *
+ * Existing users without a security question fall back to
+ * email OTP so they are not locked out.
+ */
+if (riskAssessment.level === 'HIGH') {
+  const sessionToken = response.response?.token;
 
-      if (!sessionToken) {
-        throw new AppError(
-          'Unable to start security verification',
-          500,
-        );
-      }
+  if (!sessionToken) {
+    throw new AppError(
+      'Unable to start security verification',
+      500,
+    );
+  }
 
-      const sessionRecord = await db.query.session.findFirst({
-        where: eq(session.token, sessionToken),
-      });
+  const sessionRecord = await db.query.session.findFirst({
+    where: eq(session.token, sessionToken),
+  });
 
-      if (!sessionRecord) {
-        throw new AppError(
-          'Unable to start security verification',
-          500,
-        );
-      }
+  if (!sessionRecord) {
+    throw new AppError(
+      'Unable to start security verification',
+      500,
+    );
+  }
 
-      markPendingMFA(sessionRecord.id);
+  markPendingMFA(sessionRecord.id);
 
-      return res.status(202).json(
-        new APIResponse(
-          'Additional security verification required',
-          202,
-          {
-            securityChallengeRequired: true,
-            challengeType: 'favorite-animal',
-            challengeQuestion: 'What is your favorite animal?',
-            riskLevel: riskAssessment.level,
-          },
-        ),
-      );
-    }
+  const configuredQuestion = eventUserId
+    ? await db.query.securityQuestion.findFirst({
+        where: eq(securityQuestion.userId, eventUserId),
+      })
+    : null;
 
+  if (configuredQuestion) {
+    return res.status(202).json(
+      new APIResponse(
+        'Additional security verification required',
+        202,
+        {
+          securityChallengeRequired: true,
+          challengeType: 'security-question',
+          challengeQuestion: configuredQuestion.question,
+          riskLevel: riskAssessment.level,
+        },
+      ),
+    );
+  }
+
+  /*
+   * No security question configured.
+   * Fall back to email OTP for backwards compatibility.
+   */
+  const email = existingUser?.email;
+
+  if (!email) {
+    throw new AppError(
+      'Email is required for security verification',
+      400,
+    );
+  }
+
+  const otpResponse = await auth.api.sendVerificationOTP({
+    body: {
+      email,
+      type: 'sign-in',
+    },
+  });
+
+  if (!otpResponse.success) {
+    throw new AppError(
+      'Unable to send security verification OTP',
+      500,
+    );
+  }
+
+  return res.status(202).json(
+    new APIResponse(
+      'Additional verification required',
+      202,
+      {
+        mfaRequired: true,
+        riskLevel: riskAssessment.level,
+      },
+    ),
+  );
+}
     /*
      * MEDIUM RISK
      *
@@ -439,19 +488,45 @@ export async function verifySecurityChallenge(
       );
     }
 
-    const expectedAnswer =
-      process.env.HIGH_RISK_SECURITY_ANSWER;
+    const configuredQuestion =
+      await db.query.securityQuestion.findFirst({
+        where: eq(
+          securityQuestion.userId,
+          currentSession.user.id,
+        ),
+      });
 
-    if (!expectedAnswer) {
+    if (!configuredQuestion) {
       throw new AppError(
-        'Security challenge is not configured',
-        500,
+        'Security question is not configured',
+        400,
       );
     }
 
+    const answerBuffer = Buffer.from(
+      answer.trim().toLowerCase(),
+      'utf8',
+    );
+
+    const saltBuffer = Buffer.from(
+      configuredQuestion.answerSalt,
+      'hex',
+    );
+
+    const expectedHash = Buffer.from(
+      configuredQuestion.answerHash,
+      'hex',
+    );
+
+    const actualHash = scryptSync(
+      answerBuffer,
+      saltBuffer,
+      expectedHash.length,
+    );
+
     if (
-      answer.trim().toLowerCase() !==
-      expectedAnswer.trim().toLowerCase()
+      actualHash.length !== expectedHash.length ||
+      !timingSafeEqual(actualHash, expectedHash)
     ) {
       throw new AppError(
         'Incorrect security challenge answer',
@@ -489,6 +564,176 @@ export async function verifySecurityChallenge(
   } catch (error) {
     console.error(
       'verifySecurityChallenge :: ',
+      error,
+    );
+
+    throw error instanceof AppError ||
+      error instanceof APIError
+      ? error
+      : new AppError();
+  }
+}
+
+export async function getSecurityQuestion(
+  req: Request,
+  res: Response,
+) {
+  try {
+    if (!req.session?.user) {
+      throw new AppError(
+        'User needs to be logged in',
+        401,
+      );
+    }
+
+    const configuredQuestion =
+      await db.query.securityQuestion.findFirst({
+        where: eq(
+          securityQuestion.userId,
+          req.session.user.id,
+        ),
+      });
+
+    return res.status(200).json(
+      new APIResponse(
+        'Security question fetched successfully',
+        200,
+        {
+          configured: Boolean(configuredQuestion),
+          question: configuredQuestion?.question ?? null,
+        },
+      ),
+    );
+  } catch (error) {
+    console.error(
+      'getSecurityQuestion :: ',
+      error,
+    );
+
+    throw error instanceof AppError ||
+      error instanceof APIError
+      ? error
+      : new AppError();
+  }
+}
+
+export async function setSecurityQuestion(
+  req: Request,
+  res: Response,
+) {
+  try {
+    if (!req.session?.user) {
+      throw new AppError(
+        'User needs to be logged in',
+        401,
+      );
+    }
+
+    const { question, answer, currentPassword } = req.body;
+
+if (
+  typeof currentPassword !== 'string' ||
+  !currentPassword.trim()
+) {
+  throw new AppError(
+    'Current password is required',
+    400,
+  );
+}
+
+try {
+  await auth.api.verifyPassword({
+    body: {
+      password: currentPassword,
+    },
+    headers: new Headers({
+      cookie: req.headers.cookie ?? '',
+    }),
+  });
+} catch {
+  throw new AppError(
+    'Incorrect current password',
+    401,
+  );
+}
+    if (
+      typeof question !== 'string' ||
+      !question.trim()
+    ) {
+      throw new AppError(
+        'Security question is required',
+        400,
+      );
+    }
+
+    if (
+      typeof answer !== 'string' ||
+      !answer.trim()
+    ) {
+      throw new AppError(
+        'Security answer is required',
+        400,
+      );
+    }
+
+    const normalizedAnswer = answer
+      .trim()
+      .toLowerCase();
+
+    const salt = randomBytes(16);
+
+    const answerHash = scryptSync(
+      normalizedAnswer,
+      salt,
+      64,
+    );
+
+    const existingQuestion =
+      await db.query.securityQuestion.findFirst({
+        where: eq(
+          securityQuestion.userId,
+          req.session.user.id,
+        ),
+      });
+
+    if (existingQuestion) {
+      await db
+        .update(securityQuestion)
+        .set({
+          question: question.trim(),
+          answerHash: answerHash.toString('hex'),
+          answerSalt: salt.toString('hex'),
+          updatedAt: new Date(),
+        })
+        .where(
+          eq(
+            securityQuestion.userId,
+            req.session.user.id,
+          ),
+        );
+    } else {
+      await db.insert(securityQuestion).values({
+  userId: req.session.user.id,
+  question: question.trim(),
+  answerHash: answerHash.toString('hex'),
+  answerSalt: salt.toString('hex'),
+  updatedAt: new Date(),
+});
+    }
+
+    return res.status(200).json(
+      new APIResponse(
+        'Security question saved successfully',
+        200,
+        {
+          configured: true,
+          question: question.trim(),
+        },
+      ),
+    );
+  } catch (error) {
+    console.error(
+      'setSecurityQuestion :: ',
       error,
     );
 

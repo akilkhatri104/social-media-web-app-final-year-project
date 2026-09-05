@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
-import { hashtag, media, post, postHashtag, like, notification } from '../lib/db/schema.ts';
+import { hashtag, media, post, postHashtag, like } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
-import { count, eq, inArray, sql, type InferSelectModel } from 'drizzle-orm';
+import { count, eq, inArray, sql, type InferSelectModel, and, not, isNull, or } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
 import {
   deleteFromCloudinary,
@@ -10,6 +10,9 @@ import {
   uploadToCloudinary,
 } from '../lib/cloudinary.ts';
 import { extractHashtags } from '../lib/hashtags.ts';
+import { extractMentions } from '../lib/mentions.ts';
+import { createNotificationOnce } from '../lib/notifications.ts';
+import { user } from '../lib/auth-schema.ts';
 
 export async function createPost(req: Request, res: Response) {
   try {
@@ -53,6 +56,7 @@ export async function createPost(req: Request, res: Response) {
     }
 
     const hashtags = extractHashtags(content);
+    const mentions = extractMentions(content);
 
     const [createdPost] = await db
       .insert(post)
@@ -71,13 +75,16 @@ export async function createPost(req: Request, res: Response) {
 
     // notify parent post owner (comment/reply)
     try {
+      console.log('[NOTIFY][COMMENT]', 'actor:', userId, 'parentPostId:', parentPostId);
+
       if (parentPostId) {
         const parent = await db.query.post.findFirst({
           where: eq(post.id, parentPostId),
           columns: { userId: true },
         });
-        if (parent && parent.userId !== userId) {
-          await db.insert(notification).values({
+if (parent) {
+          console.log('[NOTIFY][COMMENT] parent userId:', parent.userId);
+          await createNotificationOnce({
             recipientId: parent.userId,
             actorId: userId,
             type: 'comment',
@@ -87,17 +94,21 @@ export async function createPost(req: Request, res: Response) {
       }
     } catch (e) {
       console.error('posts.controller: parent notification failed', e);
+      console.log('[NOTIFY][COMMENT][ERROR]', e);
     }
 
     // notify quoted post owner (quote)
     try {
+      console.log('[NOTIFY][QUOTE]', 'actor:', userId, 'quotedPostId:', quotedPostId);
+
       if (quotedPostId) {
         const quoted = await db.query.post.findFirst({
           where: eq(post.id, quotedPostId),
           columns: { userId: true },
         });
-        if (quoted && quoted.userId !== userId) {
-          await db.insert(notification).values({
+if (quoted) {
+            console.log('[NOTIFY][QUOTE] quoted userId:', quoted.userId);
+            await createNotificationOnce({
             recipientId: quoted.userId,
             actorId: userId,
             type: 'quote',
@@ -107,6 +118,7 @@ export async function createPost(req: Request, res: Response) {
       }
     } catch (e) {
       console.error('posts.controller: quote notification failed', e);
+      console.log('[NOTIFY][QUOTE][ERROR]', e);
     }
 
     if (hashtags.length > 0) {
@@ -138,6 +150,29 @@ export async function createPost(req: Request, res: Response) {
           })
           .onConflictDoNothing();
       }
+    }
+
+    if (mentions.length > 0) {
+      const mentionedUsers = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(
+          or(
+            inArray(sql`lower(${user.username})`, mentions),
+            inArray(sql`lower(${user.displayUsername})`, mentions),
+          ),
+        );
+
+      await Promise.all(
+        mentionedUsers.map((mentionedUser) =>
+          createNotificationOnce({
+            recipientId: mentionedUser.id,
+            actorId: userId,
+            type: 'mention',
+            postId: createdPost.postId,
+          }),
+        ),
+      );
     }
 
     if (!createdPost || !createdPost.postId) {
@@ -208,6 +243,17 @@ export async function getPostByID(req: Request, res: Response) {
             author: true,
           },
         },
+        quotedPost: {
+          with: {
+            author: true,
+            likes: true,
+            media: true,
+            postHashtags: { with: { hashtag: true } },
+            comments: true,
+            reposts: true,
+            quotePosts: true,
+          }
+        },
       },
     });
 
@@ -253,6 +299,17 @@ export async function getPostFromUser(req: Request, res: Response) {
         comments: {
           with: { media: true, likes: true, author: true, postHashtags: { with: { hashtag: true } } },
         },
+        quotedPost: {
+          with: {
+            author: true,
+            likes: true,
+            media: true,
+            postHashtags: { with: { hashtag: true } },
+            comments: true,
+            reposts: true,
+            quotePosts: true,
+          }
+        },
       },
     });
 
@@ -270,6 +327,44 @@ export async function getPostFromUser(req: Request, res: Response) {
       .json(new APIResponse('Posts fetched successfully', 200, resultPosts));
   } catch (error) {
     console.error('getPostFromUser :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}
+
+export async function getCommentsFromUser(req: Request, res: Response) {
+  try {
+    if (!req.params || !req.params['id']) {
+      throw new AppError('No user ID provided', 400);
+    }
+    const id = req.params['id'];
+    if (!id || typeof id !== 'string') {
+      throw new AppError('Invalid user ID provided', 400);
+    }
+    const fetchedComments = await db.query.post.findMany({
+      where: and(eq(post.userId, id), not(isNull(post.parentPostId))),
+      with: {
+        likes: true,
+        media: true,
+        author: true,
+        postHashtags: { with: { hashtag: true } },
+        comments: {
+          with: { media: true, likes: true, author: true, postHashtags: { with: { hashtag: true } } },
+        },
+      },
+    });
+    const resultComments = fetchedComments.map((comment) => ({
+      ...comment,
+      likeCount: comment.likes?.length ?? 0,
+      comments: comment.comments?.map((c) => ({
+        ...c,
+        likeCount: c.likes?.length ?? 0,
+      })) ?? [],
+    }));
+    return res
+      .status(200)
+      .json(new APIResponse('Comments fetched successfully', 200, resultComments));
+  } catch (error) {
+    console.error('getCommentsFromUser :: ', error);
     throw error instanceof AppError ? error : new AppError();
   }
 }

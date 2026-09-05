@@ -24,20 +24,19 @@ export async function verifyAuth(
       headers: req.headers,
     });
 
-    if (!session) {
-  throw new AppError(
-    'User needs to be logged in to access this resource',
-    401,
-  );
-}
+    if (!session || !session.user || !session.session) {
+      throw new AppError(
+        'User needs to be logged in to access this resource',
+        401,
+      );
+    }
 
-if (isPendingMFA(session.session.id)) {
-  throw new AppError('MFA verification required', 401);
-}
+    if (isPendingMFA(session.session.id)) {
+      throw new AppError('MFA verification required', 401);
+    }
 
-req.session = session;
-next();
-
+    req.session = session;
+    next();
   } catch (error) {
     console.error('verifyAuth :: ', error);
     throw error;

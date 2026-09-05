@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router"
 import Header from "~/components/Header"
-import { Spinner } from "~/components/ui/spinner"
+import { LoadingState } from "~/components/ui/spinner"
 import { useMe } from "~/hooks/useMe"
 
 export default function PublicLayout() {
@@ -8,11 +8,7 @@ export default function PublicLayout() {
     const location = useLocation()
 
     if (isInitialLoading) {
-        return (
-            <div className="min-h-screen min-w-screen flex items-center justify-center">
-                <Spinner />
-            </div>
-        )
+        return <LoadingState label="Loading account..." variant="page" />
     }
 
     if (isAuth) {

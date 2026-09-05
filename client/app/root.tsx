@@ -18,6 +18,7 @@ import { queryClient } from "./lib/react-query";
 import { SidebarProvider, SidebarTrigger } from "./components/ui/sidebar";
 import { AppSidebar } from "./components/AppSidebar";
 import { useMe } from "./hooks/useMe";
+import { useStorageSync } from "./hooks/useStorageSync";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -55,6 +56,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useStorageSync();
+
   return (
     <QueryClientProvider client={queryClient}>
       <SidebarProvider>
@@ -70,28 +73,44 @@ export default function App() {
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = "Oops!";
   let details = "An unexpected error occurred.";
-  let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
-    details =
-      error.status === 404
-        ? "The requested page could not be found."
-        : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
+    switch (error.status) {
+      case 404:
+        message = "404";
+        details = "The page you're looking for doesn't exist.";
+        break;
+      case 403:
+        message = "403";
+        details = "You don't have permission to view this page.";
+        break;
+      case 401:
+        message = "401";
+        details = "Please sign in to continue.";
+        break;
+      case 429:
+        message = "Too Many Requests";
+        details = "You're doing that too often. Please wait a moment and try again.";
+        break;
+      case 500:
+        message = "Server Error";
+        details = "Something went wrong on our end. Please try again later.";
+        break;
+      default:
+        message = `Error ${error.status}`;
+        details = error.statusText || details;
+    }
   }
 
   return (
-    <main className="p-16 container mx-auto bg-card w-fit roundex-2xl">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
-          <code>{stack}</code>
-        </pre>
-      )}
+    <main className="flex min-h-screen items-center justify-center p-8">
+      <div className="text-center space-y-4">
+        <h1 className="text-6xl font-bold text-muted-foreground">{message}</h1>
+        <p className="text-lg text-muted-foreground">{details}</p>
+        <a href="/" className="inline-block mt-4 text-primary underline">
+          Go back home
+        </a>
+      </div>
     </main>
   );
 }

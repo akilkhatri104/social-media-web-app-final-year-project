@@ -18,12 +18,23 @@ import { session } from "../lib/auth-schema.ts";
 import { assessMLRisk } from '../lib/mlRiskAssessment.js';
 
 export async function me(req: Request, res: Response) {
-  if (!req.session) {
-    throw new AppError('User not logged in', 400);
+  if (!req.session?.user) {
+    throw new AppError('User not logged in', 401);
+  }
+
+  const currentUser = await db.query.user.findFirst({
+    where: eq(user.id, req.session.user.id),
+  });
+
+  if (!currentUser) {
+    throw new AppError('User not found', 404);
   }
 
   return res.json(
-    new APIResponse('User session fetched successfully', 200, req.session),
+    new APIResponse('User session fetched successfully', 200, {
+      ...req.session,
+      user: currentUser,
+    }),
   );
 }
 
@@ -596,8 +607,8 @@ export async function logout(req: Request, res: Response) {
 
 export async function updateUser(req: Request, res: Response) {
   try {
-    if (!req.session) {
-      throw new AppError('User needs to be logged in to update details', 400);
+    if (!req.session?.user) {
+      throw new AppError('User needs to be logged in to update details', 401);
     }
 
     if (!req.body) {
@@ -674,7 +685,7 @@ export async function updateUser(req: Request, res: Response) {
 
 export async function sendEmailVerificationOTP(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to verify email', 401);
     }
 
@@ -714,7 +725,7 @@ export async function verifyEmailVerificationOTP(req: Request, res: Response) {
     if (!otp || otp.length !== 6) {
       throw new AppError('No or invalid OTP provided', 400);
     }
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to verify email', 401);
     }
 
@@ -860,7 +871,7 @@ export async function verifyForgetPasswordOTP(req: Request, res: Response) {
 
 export async function searchUsers(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to perform search', 401);
     }
     const myId = req.session.user.id;

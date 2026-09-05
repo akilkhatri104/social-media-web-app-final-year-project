@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router";
 import { api } from "~/lib/axios";
 import { useMe } from "~/hooks/useMe";
 import type { APIResponse, UserDto, MessageDto, ConversationDto } from "~/lib/types";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { UserAvatar } from "~/components/UserAvatar";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { 
@@ -13,11 +13,12 @@ import {
   MessageSquareIcon, 
   UserPlusIcon, 
   ArrowLeftIcon,
-  Loader2Icon,
   CornerUpLeftIcon,
   XIcon
 } from "lucide-react";
 import { toast } from "sonner";
+import { LoadingState, Spinner } from "~/components/ui/spinner";
+import { QueryErrorState } from "~/components/QueryState";
 
 // INDIVIDUAL MESSAGE ITEM COMPONENT WITH GESTURE SWIPING & HOVER REPLY
 interface MessageBubbleItemProps {
@@ -25,7 +26,6 @@ interface MessageBubbleItemProps {
   isMe: boolean;
   meId?: string;
   onReply: (msg: MessageDto) => void;
-  getInitials: (name: string) => string;
   formatTime: (isoString: string) => string;
   onScrollToMessage: (id: number) => void;
   isHighlighted: boolean;
@@ -36,7 +36,6 @@ function MessageBubbleItem({
   isMe,
   meId,
   onReply,
-  getInitials,
   formatTime,
   onScrollToMessage,
   isHighlighted,
@@ -193,7 +192,7 @@ export default function MessagesRoute() {
   const initialUsername = searchParams.get("to")?.replace(/^@/, "").trim() || "";
 
   // Fetch Conversations List
-  const { data: conversations = [], isLoading: isConversationsLoading } = useQuery<ConversationDto[]>({
+  const { data: conversations = [], isLoading: isConversationsLoading, isError: isConversationsError } = useQuery<ConversationDto[]>({
     queryKey: ["conversations"],
     queryFn: async () => {
       const res = await api.get<APIResponse>("/api/messages/conversations");
@@ -230,7 +229,7 @@ export default function MessagesRoute() {
   });
 
   // Fetch Chat History
-  const { data: chatHistory = [], isLoading: isChatLoading } = useQuery<MessageDto[]>({
+  const { data: chatHistory = [], isLoading: isChatLoading, isError: isChatError } = useQuery<MessageDto[]>({
     queryKey: ["chat-history", selectedUserId],
     queryFn: async () => {
       const res = await api.get<APIResponse>(`/api/messages/${selectedUserId}`);
@@ -303,16 +302,6 @@ export default function MessagesRoute() {
     setSearchQuery(""); // Clear search to show recent conversations
   };
 
-  const getInitials = (name: string = "") => {
-    if (!name) return "U";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   const formatTime = (isoString: string) => {
     const date = new Date(isoString);
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -380,9 +369,7 @@ export default function MessagesRoute() {
                 Search Results
               </p>
               {isSearching ? (
-                <div className="flex items-center justify-center p-8">
-                  <Loader2Icon className="h-6 w-6 animate-spin text-primary" />
-                </div>
+                <LoadingState label="Searching users..." variant="section" />
               ) : searchResults.length > 0 ? (
                 searchResults.map((user) => (
                   <button
@@ -390,10 +377,12 @@ export default function MessagesRoute() {
                     onClick={() => selectUserFromSearch(user)}
                     className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-accent text-left transition-all"
                   >
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.image || undefined} alt={user.name} />
-                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar
+                      image={user.image}
+                      name={user.name}
+                      username={user.username}
+                      className="h-10 w-10"
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-foreground truncate">{user.name}</p>
                       <p className="text-xs text-muted-foreground truncate">@{user.username || "student"}</p>
@@ -409,9 +398,9 @@ export default function MessagesRoute() {
             <div className="p-2 space-y-1">
               <p className="text-xs font-semibold text-muted-foreground px-3 py-1">Recent Chats</p>
               {isConversationsLoading ? (
-                <div className="flex items-center justify-center p-8">
-                  <Loader2Icon className="h-6 w-6 animate-spin text-primary" />
-                </div>
+                <LoadingState label="Loading conversations..." variant="section" />
+              ) : isConversationsError ? (
+                <QueryErrorState message="Failed to load conversations." className="py-8" />
               ) : conversations.length > 0 ? (
                 conversations.map((chat) => {
                   const isActive = chat.user.id === selectedUserId;
@@ -429,10 +418,12 @@ export default function MessagesRoute() {
                           : "hover:bg-accent hover:text-accent-foreground"
                       }`}
                     >
-                      <Avatar className="h-11 w-11 border-2 border-background/20">
-                        <AvatarImage src={chat.user.image || undefined} alt={chat.user.name} />
-                        <AvatarFallback>{getInitials(chat.user.name)}</AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        image={chat.user.image}
+                        name={chat.user.name}
+                        username={chat.user.username}
+                        className="h-11 w-11 border-2 border-background/20"
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-baseline mb-0.5">
                           <p className={`font-semibold truncate ${isActive ? "text-primary-foreground" : "text-foreground"}`}>
@@ -483,10 +474,12 @@ export default function MessagesRoute() {
               >
                 <ArrowLeftIcon className="h-5 w-5" />
               </Button>
-              <Avatar className="h-10 w-10 border border-border">
-                <AvatarImage src={activePartner.image || undefined} alt={activePartner.name} />
-                <AvatarFallback>{getInitials(activePartner.name)}</AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                image={activePartner.image}
+                name={activePartner.name}
+                username={activePartner.username}
+                className="h-10 w-10 border border-border"
+              />
               <div className="flex-1 min-w-0">
                 <h2 className="font-semibold text-foreground truncate">{activePartner.name}</h2>
                 <p className="text-xs text-muted-foreground truncate">@{activePartner.username || "student"}</p>
@@ -499,10 +492,9 @@ export default function MessagesRoute() {
               className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/10"
             >
               {isChatLoading && chatHistory.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full space-y-2">
-                  <Loader2Icon className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-xs text-muted-foreground">Loading chat history...</p>
-                </div>
+                <LoadingState label="Loading chat history..." className="h-full" spinnerClassName="size-8" />
+              ) : isChatError ? (
+                <QueryErrorState message="Failed to load messages." className="h-full" />
               ) : chatHistory.length > 0 ? (
                 chatHistory.map((msg, index) => {
                   const isMe = msg.senderId === me?.id;
@@ -525,7 +517,6 @@ export default function MessagesRoute() {
                         isMe={isMe}
                         meId={me?.id}
                         onReply={setReplyingTo}
-                        getInitials={getInitials}
                         formatTime={formatTime}
                         onScrollToMessage={handleScrollToMessage}
                         isHighlighted={highlightedMessageId === msg.id}
@@ -535,10 +526,12 @@ export default function MessagesRoute() {
                 })
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-2 py-12">
-                  <Avatar className="h-16 w-16 mb-2">
-                    <AvatarImage src={activePartner.image || undefined} alt={activePartner.name} />
-                    <AvatarFallback>{getInitials(activePartner.name)}</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    image={activePartner.image}
+                    name={activePartner.name}
+                    username={activePartner.username}
+                    className="h-16 w-16 mb-2"
+                  />
                   <p className="font-semibold text-foreground">Say hello to {activePartner.name}!</p>
                   <p className="text-xs text-muted-foreground max-w-xs">This is the start of your message history with @{activePartner.username || "student"}.</p>
                 </div>
@@ -589,7 +582,7 @@ export default function MessagesRoute() {
                 className="h-11 w-11 rounded-xl shrink-0 transition-transform active:scale-95"
               >
                 {sendMessageMutation.isPending ? (
-                  <Loader2Icon className="h-5 w-5 animate-spin" />
+                  <Spinner className="size-5 text-current" />
                 ) : (
                   <SendIcon className="h-4 w-4" />
                 )}

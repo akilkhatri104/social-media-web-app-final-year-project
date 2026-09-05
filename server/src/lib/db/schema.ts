@@ -280,10 +280,35 @@ export const notification = p.pgTable('notification', {
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   type: p
-    .text('type', { enum: ['like', 'comment', 'repost', 'follow', 'quote'] })
+    .text('type', { enum: ['like', 'comment', 'repost', 'follow', 'quote', 'mention'] })
     .notNull(),
-  postId: p.integer('post_id'),
+  postId: p.integer('post_id').references(() => post.id, { onDelete: 'set null' }),
   readAt: p.timestamp('read_at'),
+  createdAt: p.timestamp('created_at').defaultNow().notNull(),
+  updatedAt: p
+    .timestamp('updated_at')
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
+export const notificationPreference = p.pgTable('notification_preference', {
+  userId: p
+    .text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  inAppLikes: p.boolean('in_app_likes').notNull().default(true),
+  inAppComments: p.boolean('in_app_comments').notNull().default(true),
+  inAppReposts: p.boolean('in_app_reposts').notNull().default(true),
+  inAppFollows: p.boolean('in_app_follows').notNull().default(true),
+  inAppQuotes: p.boolean('in_app_quotes').notNull().default(true),
+  inAppMentions: p.boolean('in_app_mentions').notNull().default(true),
+  emailEnabled: p.boolean('email_enabled').notNull().default(true),
+  emailLikes: p.boolean('email_likes').notNull().default(false),
+  emailComments: p.boolean('email_comments').notNull().default(true),
+  emailReposts: p.boolean('email_reposts').notNull().default(false),
+  emailFollows: p.boolean('email_follows').notNull().default(true),
+  emailQuotes: p.boolean('email_quotes').notNull().default(true),
+  emailMentions: p.boolean('email_mentions').notNull().default(true),
   createdAt: p.timestamp('created_at').defaultNow().notNull(),
   updatedAt: p
     .timestamp('updated_at')
@@ -305,6 +330,16 @@ export const notificationRelations = relations(notification, ({ one }) => ({
     references: [post.id],
   }),
 }));
+
+export const notificationPreferenceRelations = relations(
+  notificationPreference,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [notificationPreference.userId],
+      references: [user.id],
+    }),
+  }),
+);
 
 export const authRiskEvent = p.pgTable('auth_risk_event', {
   id: p.serial('id').primaryKey(),

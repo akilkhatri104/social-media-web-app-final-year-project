@@ -11,12 +11,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import FollowButton from "~/components/FollowButton";
 import { Button } from "~/components/ui/button";
 import { queryKeys } from "~/lib/react-query";
-import { Spinner } from "~/components/ui/spinner";
+import { LoadingState } from "~/components/ui/spinner";
+import { QueryEmptyState, QueryErrorState } from "~/components/QueryState";
 import { useDocumentTitle } from "~/lib/title";
+import { UserAvatar } from "~/components/UserAvatar";
 
 export default function UserProfile() {
   const { username } = useParams();
@@ -25,7 +26,7 @@ export default function UserProfile() {
   const cleanUsername = username?.replace("@", "");
   const { data: session } = useMe();
 
-  const { data: userData, isLoading: userLoading } = useQuery({
+  const { data: userData, isLoading: userLoading, isError: userError } = useQuery({
     queryKey: queryKeys.users.byUsername(cleanUsername),
     queryFn: async () => {
       const res = await api.get(`/api/users/${cleanUsername}`);
@@ -61,26 +62,55 @@ export default function UserProfile() {
     },
   });
 
-  const { data: postsData, isLoading: postsLoading } = useQuery({
-    queryKey: queryKeys.posts.byUserId(userData?.id),
-    queryFn: async () => {
-      const res = await api.get(`/api/posts/users/${userData?.id}`);
-      return res.data.data;
-    },
-    enabled: !!userData?.id
-  });
+const { data: postsData, isLoading: postsLoading } = useQuery({
+  queryKey: queryKeys.posts.byUserId(userData?.id),
+  queryFn: async () => {
+    const res = await api.get(`/api/posts/users/${userData?.id}`);
+    return res.data.data;
+  },
+  enabled: !!userData?.id
+});
 
-  if (userLoading) return <p className="p-10 text-white">Loading...</p>;
-  if (!userData) return <p className="p-10 text-white">User not found</p>;
+// Comments by user
+const { data: commentsData, isLoading: commentsLoading } = useQuery({
+  queryKey: ["comments", userData?.id],
+  queryFn: async () => {
+    const res = await api.get(`/api/posts/users/${userData?.id}/comments`);
+    return res.data.data;
+  },
+  enabled: !!userData?.id,
+});
 
-  const isOwnProfile = session?.id === userData?.id;
+// Liked posts by user
+const { data: likedPostsData, isLoading: likesLoading } = useQuery({
+  queryKey: ["likes", userData?.id],
+  queryFn: async () => {
+    const res = await api.get(`/api/likes/users/${userData?.id}`);
+    return res.data.data;
+  },
+  enabled: !!userData?.id,
+});
+
+
+  if (userLoading) return <LoadingState label="Loading profile..." variant="page" />;
+  if (userError) return <QueryErrorState message="Failed to load profile. Please try again." />;
+  if (!userData) return <QueryEmptyState label={`User "${cleanUsername}" not found.`} />;
+
+  const isOwnProfile =
+    String(session?.id ?? "") === String(userData?.id ?? "") ||
+    [session?.username, session?.displayUsername]
+      .filter(Boolean)
+      .some((name) => name?.toLowerCase() === cleanUsername?.toLowerCase());
 
   return (
     <div className="text-white">
       <div className="flex items-center gap-10 p-10">
-        <img
-          src={userData.image || `https://ui-avatars.com/api/?name=${userData.displayUsername}`}
-          className="w-32 h-32 rounded-full border-2 border-white"
+        <UserAvatar
+          image={userData.image}
+          name={userData.name}
+          username={userData.username}
+          displayUsername={userData.displayUsername}
+          className="w-32 h-32 border-2 border-white"
         />
         <div>
           <h2 className="text-2xl font-bold">
@@ -121,13 +151,13 @@ export default function UserProfile() {
         </div>
       </div>
 
-      {followersLoading ? <Spinner /> : (
+      {followersLoading ? <LoadingState label="Loading followers..." variant="section" /> : (
         <Dialog open={followDialog === "followers"} onOpenChange={(o) => !o && setFollowDialog(null)}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Followers</DialogTitle>
             </DialogHeader>
-            {followersLoading && <p>Loading...</p>}
+            {followersLoading && <LoadingState label="Loading followers..." variant="section" />}
             {!followersLoading && followersList && followersList?.followers?.length === 0 && (
               <p className="text-muted-foreground">No followers yet</p>
             )}
@@ -138,10 +168,12 @@ export default function UserProfile() {
                 onClick={() => setFollowDialog(null)}
                 className="flex items-center gap-3 py-2 hover:bg-muted px-2 rounded"
               >
-                <Avatar>
-                  <AvatarImage src={f.image} />
-                  <AvatarFallback>{f.name?.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  image={f.image}
+                  name={f.name}
+                  username={f.username}
+                  displayUsername={f.displayUsername}
+                />
                 <div>
                   <p className="font-semibold">{f.name}</p>
                   <p className="text-sm text-muted-foreground">@{f.displayUsername}</p>
@@ -152,13 +184,13 @@ export default function UserProfile() {
         </Dialog>
       )}
 
-      {followingLoading ? <Spinner /> : (
+      {followingLoading ? <LoadingState label="Loading following..." variant="section" /> : (
         <Dialog open={followDialog === "following"} onOpenChange={(o) => !o && setFollowDialog(null)}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Following</DialogTitle>
             </DialogHeader>
-            {followingLoading && <p>Loading...</p>}
+            {followingLoading && <LoadingState label="Loading following..." variant="section" />}
             {!followingLoading && followingList && followingList?.following?.length === 0 && (
               <p className="text-muted-foreground">Not following anyone yet</p>
             )}
@@ -169,10 +201,12 @@ export default function UserProfile() {
                 onClick={() => setFollowDialog(null)}
                 className="flex items-center gap-3 py-2 hover:bg-muted px-2 rounded"
               >
-                <Avatar>
-                  <AvatarImage src={f.image} />
-                  <AvatarFallback>{f.name?.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  image={f.image}
+                  name={f.name}
+                  username={f.username}
+                  displayUsername={f.displayUsername}
+                />
                 <div>
                   <p className="font-semibold">{f.name}</p>
                   <p className="text-sm text-muted-foreground">@{f.displayUsername}</p>
@@ -201,7 +235,7 @@ export default function UserProfile() {
 
       {activeTab === "posts" && (
         <div className="flex flex-col">
-          {postsLoading && <p className="p-10">Loading posts...</p>}
+          {postsLoading && <LoadingState label="Loading posts..." variant="section" />}
           {!postsLoading && postsData?.length === 0 && (
             <p className="p-10 text-gray-400">No posts yet</p>
           )}
@@ -214,8 +248,34 @@ export default function UserProfile() {
         </div>
       )}
 
-      {activeTab === "comments" && <p className="p-10 text-gray-400">Comments coming soon</p>}
-      {activeTab === "likes" && <p className="p-10 text-gray-400">Likes coming soon</p>}
+      {activeTab === "comments" && (
+        <div className="flex flex-col">
+          {commentsLoading && <LoadingState label="Loading comments..." variant="section" />}
+          {!commentsLoading && commentsData?.length === 0 && (
+            <p className="p-10 text-gray-400">No comments yet</p>
+          )}
+          {commentsData?.map((post: any) => (
+            <div key={post.id}>
+              <PostCard post={post} />
+              <Separator />
+            </div>
+          ))}
+        </div>
+      )}
+      {activeTab === "likes" && (
+        <div className="flex flex-col">
+          {likesLoading && <LoadingState label="Loading likes..." variant="section" />}
+          {!likesLoading && likedPostsData?.length === 0 && (
+            <p className="p-10 text-gray-400">No liked posts yet</p>
+          )}
+          {likedPostsData?.map((post: any) => (
+            <div key={post.id}>
+              <PostCard post={post} />
+              <Separator />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

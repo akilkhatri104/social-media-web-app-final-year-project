@@ -1,13 +1,14 @@
 import { and, eq } from 'drizzle-orm';
 import { AppError } from '../middlewares/errorHandler.ts';
 import type { Request, Response } from 'express';
-import { post, repost, notification } from '../lib/db/schema.ts';
+import { post, repost } from '../lib/db/schema.ts';
 import { db } from '../lib/db/client.ts';
 import { APIResponse } from '../lib/apiResponse.ts';
+import { createNotificationOnce } from '../lib/notifications.ts';
 
 export async function toggleRepost(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to toggle reposts.', 401);
     }
 
@@ -63,8 +64,8 @@ export async function toggleRepost(req: Request, res: Response) {
         columns: { userId: true },
       });
 
-      if (postOwner && postOwner.userId !== req.session.user.id) {
-        await db.insert(notification).values({
+      if (postOwner) {
+        await createNotificationOnce({
           recipientId: postOwner.userId,
           actorId: req.session.user.id,
           type: 'repost',
@@ -88,7 +89,7 @@ export async function toggleRepost(req: Request, res: Response) {
 
 export async function getRepostStatus(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError(
         'User needs to be logged in to get repost status.',
         401,

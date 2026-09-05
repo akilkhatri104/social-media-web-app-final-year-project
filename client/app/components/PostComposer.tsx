@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { ImagePlus, X } from "lucide-react";
 import { useMe } from "~/hooks/useMe";
 import { queryKeys } from "~/lib/react-query";
 import { NavLink, useNavigate } from "react-router";
 import { toast } from "sonner";
 import axios from "axios";
+import { UserAvatar } from "./UserAvatar";
+import type { APIResponse, SearchUserResult } from "~/lib/types";
+import { Spinner } from "./ui/spinner";
 
 type Props = {
     parentPostId?: number;
@@ -17,6 +19,13 @@ type Props = {
     id?: string,
     quotedPostId?: number
 };
+
+const ACTIVE_MENTION_PATTERN = /(^|\s)@([a-zA-Z0-9_]{0,30})$/;
+
+function getActiveMention(content: string) {
+    const match = content.match(ACTIVE_MENTION_PATTERN);
+    return match?.[2] ?? null;
+}
 
 export default function PostComposer({
     parentPostId,
@@ -29,6 +38,22 @@ export default function PostComposer({
     const [files, setFiles] = useState<File[]>([]);
     const { isAuth, isInitialLoading, data } = useMe()
     const navigate = useNavigate()
+    const activeMention = getActiveMention(content);
+
+    const { data: mentionUsers = [] } = useQuery({
+        queryKey: queryKeys.explore.search(activeMention ? `mention:${activeMention}` : "mention:"),
+        queryFn: async () => {
+            const res = await api.get<APIResponse>("/api/explore/search", {
+                params: { q: activeMention, limit: 5 },
+            });
+            return (res.data.data?.users ?? []) as SearchUserResult[];
+        },
+        enabled: activeMention !== null && activeMention.length > 0,
+    });
+
+    const insertMention = (handle: string) => {
+        setContent((current) => current.replace(ACTIVE_MENTION_PATTERN, `$1@${handle} `));
+    };
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -89,10 +114,12 @@ export default function PostComposer({
     return !isInitialLoading && !isAuth ? <div className="flex gap-4 p-4 border-b"><NavLink className='hover:underline text-accent-foreground' to='/signin'>Signin</NavLink>or<NavLink className='hover:underline text-accent-foreground' to='/signup'>Signup</NavLink> to make your post!</div> : (
         <div className="flex gap-4 p-4 border-b" id={id}>
             <NavLink to={`/@${data?.displayUsername}`}>
-                <Avatar className="cursor-pointer">
-                    <AvatarImage src={data?.image} />
-                    <AvatarFallback>{data?.displayUsername?.[0]}</AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                    image={data?.image}
+                    name={data?.name}
+                    displayUsername={data?.displayUsername}
+                    className="cursor-pointer"
+                />
             </NavLink>
 
             <div className="flex-1 space-y-3">
@@ -100,8 +127,45 @@ export default function PostComposer({
                     placeholder={placeholder}
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" && e.shiftKey && content && !mutation.isPending) {
+                            e.preventDefault();
+                            mutation.mutate();
+                        }
+                    }}
                     className="resize-none border-none focus-visible:ring-0 text-lg"
                 />
+
+                {activeMention !== null && mentionUsers.length > 0 && (
+                    <div className="overflow-hidden rounded-xl border bg-popover shadow-sm">
+                        {mentionUsers.map((user) => {
+                            const handle = user.displayUsername ?? user.username;
+
+                            if (!handle) return null;
+
+                            return (
+                                <button
+                                    key={user.id}
+                                    type="button"
+                                    className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-accent"
+                                    onClick={() => insertMention(handle)}
+                                >
+                                    <UserAvatar
+                                        image={user.image}
+                                        name={user.name}
+                                        username={user.username}
+                                        displayUsername={user.displayUsername}
+                                        className="h-8 w-8"
+                                    />
+                                    <span className="min-w-0">
+                                        <span className="block truncate font-medium">{user.name}</span>
+                                        <span className="block truncate text-xs text-muted-foreground">@{handle}</span>
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* Media Preview */}
                 {files.length > 0 && (
@@ -152,7 +216,7 @@ export default function PostComposer({
                         className="rounded-full"
                     >
                         {mutation.isPending ? (
-                            <Loader2 className="animate-spin w-4 h-4" />
+                            <Spinner className="size-4 text-current" />
                         ) : parentPostId ? (
                             "Reply"
                         ) : (

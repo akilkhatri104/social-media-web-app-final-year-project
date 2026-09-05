@@ -1,14 +1,247 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
 import { db } from '../lib/db/client.ts';
-import { follow, post, repost } from '../lib/db/schema.ts';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { bookmark, follow, like, post, repost } from '../lib/db/schema.ts';
+import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
 import { toPostDto } from '../lib/postDto.ts';
+import { auth } from '../lib/auth.ts';
+
+type ViewerFeedContext = {
+  followedUserIds: Set<string>;
+  interactedPostIds: Set<number>;
+  interactedAuthorIds: Set<string>;
+  interestedHashtags: Set<string>;
+};
+
+const FOR_YOU_CANDIDATE_LIMIT = 200;
+const FOR_YOU_REPOST_CANDIDATE_LIMIT = 200;
+const FOR_YOU_RESULT_LIMIT = 50;
+const HASHTAG_INTEREST_BOOST_CAP = 36;
+
+function postWithFeedRelations() {
+  return {
+    author: true,
+    likes: true,
+    media: true,
+    postHashtags: { with: { hashtag: true } },
+    reposts: true,
+    quotePosts: true,
+    parentPost: { with: { author: true } },
+    quotedPost: {
+      with: {
+        author: true,
+        likes: true,
+        media: true,
+        postHashtags: { with: { hashtag: true } },
+        comments: true,
+        reposts: true,
+        quotePosts: true,
+      },
+    },
+    comments: {
+      with: {
+        media: true,
+        likes: true,
+        author: true,
+        parentPost: { with: { author: true } },
+      },
+    },
+  } as const;
+}
+
+function addPostToViewerContext(
+  context: ViewerFeedContext,
+  targetPost?: {
+    id: number;
+    userId: string;
+    postHashtags?: { hashtag?: { name: string } | null }[];
+  } | null,
+) {
+  if (!targetPost) {
+    return;
+  }
+
+  context.interactedPostIds.add(targetPost.id);
+  context.interactedAuthorIds.add(targetPost.userId);
+
+  for (const entry of targetPost.postHashtags ?? []) {
+    if (entry.hashtag?.name) {
+      context.interestedHashtags.add(entry.hashtag.name);
+    }
+  }
+}
+
+function canViewPostInForYou(
+  targetPost: { userId: string; visibility: 'public' | 'followers' | null },
+  viewerId: string | null,
+  viewerContext: ViewerFeedContext | null,
+) {
+  if (targetPost.visibility !== 'followers') {
+    return true;
+  }
+
+  if (!viewerId || !viewerContext) {
+    return false;
+  }
+
+  return (
+    targetPost.userId === viewerId ||
+    viewerContext.followedUserIds.has(targetPost.userId)
+  );
+}
+
+function scorePostForYou(
+  targetPost: {
+    id: number;
+    userId: string;
+    createdAt: Date;
+    likes?: { userId: string }[];
+    comments?: { userId: string }[];
+    reposts?: { userId: string }[];
+    quotePosts?: { userId: string }[];
+    postHashtags?: { hashtag?: { name: string } | null }[];
+  },
+  viewerId: string | null,
+  viewerContext: ViewerFeedContext | null,
+) {
+  const ageHours = Math.max(
+    0,
+    (Date.now() - targetPost.createdAt.getTime()) / 3_600_000,
+  );
+  const recencyScore = Math.max(0, 72 - ageHours);
+  const likeCount = targetPost.likes?.length ?? 0;
+  const commentCount = targetPost.comments?.length ?? 0;
+  const repostCount =
+    (targetPost.reposts?.length ?? 0) + (targetPost.quotePosts?.length ?? 0);
+
+  let score = recencyScore + likeCount * 2 + commentCount * 3 + repostCount * 2;
+
+  if (!viewerId || !viewerContext) {
+    return score;
+  }
+
+  if (viewerContext.followedUserIds.has(targetPost.userId)) {
+    score += 25;
+  }
+
+  if (viewerContext.interactedAuthorIds.has(targetPost.userId)) {
+    score += 18;
+  }
+
+  const matchingHashtagCount = (targetPost.postHashtags ?? []).filter((entry) =>
+    entry.hashtag?.name
+      ? viewerContext.interestedHashtags.has(entry.hashtag.name)
+      : false,
+  ).length;
+  score += Math.min(matchingHashtagCount * 12, HASHTAG_INTEREST_BOOST_CAP);
+
+  const followedUserEngaged = [
+    ...(targetPost.likes ?? []),
+    ...(targetPost.comments ?? []),
+    ...(targetPost.reposts ?? []),
+    ...(targetPost.quotePosts ?? []),
+  ].some((interaction) =>
+    viewerContext.followedUserIds.has(interaction.userId),
+  );
+
+  if (followedUserEngaged) {
+    score += 8;
+  }
+
+  if (targetPost.userId === viewerId) {
+    score -= 10;
+  }
+
+  if (viewerContext.interactedPostIds.has(targetPost.id)) {
+    score -= 15;
+  }
+
+  return score;
+}
+
+async function getViewerFeedContext(userId: string): Promise<ViewerFeedContext> {
+  const context: ViewerFeedContext = {
+    followedUserIds: new Set<string>(),
+    interactedPostIds: new Set<number>(),
+    interactedAuthorIds: new Set<string>(),
+    interestedHashtags: new Set<string>(),
+  };
+
+  const [follows, likedPosts, bookmarkedPosts, repostedPosts, comments, ownPosts] =
+    await Promise.all([
+      db
+        .select({ followingId: follow.followingId })
+        .from(follow)
+        .where(eq(follow.followerId, userId)),
+      db.query.like.findMany({
+        where: eq(like.userId, userId),
+        with: {
+          post: {
+            with: { postHashtags: { with: { hashtag: true } } },
+          },
+        },
+      }),
+      db.query.bookmark.findMany({
+        where: eq(bookmark.userId, userId),
+        with: {
+          post: {
+            with: { postHashtags: { with: { hashtag: true } } },
+          },
+        },
+      }),
+      db.query.repost.findMany({
+        where: eq(repost.userId, userId),
+        with: {
+          post: {
+            with: { postHashtags: { with: { hashtag: true } } },
+          },
+        },
+      }),
+      db.query.post.findMany({
+        where: and(eq(post.userId, userId), isNotNull(post.parentPostId)),
+        with: {
+          parentPost: {
+            with: { postHashtags: { with: { hashtag: true } } },
+          },
+        },
+      }),
+      db.query.post.findMany({
+        where: eq(post.userId, userId),
+        with: { postHashtags: { with: { hashtag: true } } },
+      }),
+    ]);
+
+  for (const item of follows) {
+    context.followedUserIds.add(item.followingId);
+  }
+
+  for (const item of likedPosts) {
+    addPostToViewerContext(context, item.post);
+  }
+
+  for (const item of bookmarkedPosts) {
+    addPostToViewerContext(context, item.post);
+  }
+
+  for (const item of repostedPosts) {
+    addPostToViewerContext(context, item.post);
+  }
+
+  for (const item of comments) {
+    addPostToViewerContext(context, item.parentPost);
+  }
+
+  for (const item of ownPosts) {
+    addPostToViewerContext(context, item);
+  }
+
+  return context;
+}
 
 export async function getFollowingFeed(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in access Following Feed');
     }
 
@@ -19,34 +252,7 @@ export async function getFollowingFeed(req: Request, res: Response) {
 
     const fetchedPosts = await db.query.post.findMany({
       where: and(isNull(post.parentPostId), inArray(post.userId, follows)),
-      with: {
-        author: true,
-        likes: true,
-        media: true,
-        postHashtags: { with: { hashtag: true } },
-        reposts: true,
-        quotePosts: true,
-        parentPost: { with: { author: true } },
-        quotedPost: {
-          with: {
-            author: true,
-            likes: true,
-            media: true,
-            postHashtags: { with: { hashtag: true } },
-            comments: true,
-            reposts: true,
-            quotePosts: true,
-          },
-        },
-        comments: {
-          with: {
-            media: true,
-            likes: true,
-            author: true,
-            parentPost: { with: { author: true } },
-          },
-        },
-      },
+      with: postWithFeedRelations(),
       orderBy: desc(post.createdAt),
     });
 
@@ -62,31 +268,7 @@ export async function getFollowingFeed(req: Request, res: Response) {
       with: {
         user: true,
         post: {
-          with: {
-            author: true,
-            likes: true,
-            media: true,
-            reposts: true,
-            quotePosts: true,
-            parentPost: { with: { author: true } },
-            quotedPost: {
-              with: {
-                author: true,
-                likes: true,
-                media: true,
-                comments: true,
-                reposts: true,
-                quotePosts: true,
-              },
-            },
-            comments: {
-              with: {
-                media: true,
-                likes: true,
-                author: true,
-              },
-            },
-          },
+          with: postWithFeedRelations(),
         },
       },
     });
@@ -115,89 +297,70 @@ export async function getFollowingFeed(req: Request, res: Response) {
 
 export async function getSimpleForYouFeed(req: Request, res: Response) {
   try {
-    const fetchedPosts = await db.query.post.findMany({
-      where: isNull(post.parentPostId),
-      with: {
-        author: true,
-        likes: true,
-        media: true,
-        postHashtags: { with: { hashtag: true } },
-        reposts: true,
-        quotePosts: true,
-        parentPost: { with: { author: true } },
-        quotedPost: {
-          with: {
-            author: true,
-            likes: true,
-            media: true,
-            postHashtags: { with: { hashtag: true } },
-            comments: true,
-            reposts: true,
-            quotePosts: true,
-          },
-        },
-        comments: {
-          with: {
-            media: true,
-            likes: true,
-            author: true,
-            parentPost: { with: { author: true } },
-          },
-        },
-      },
-      orderBy: desc(post.createdAt),
+    const session = await auth.api.getSession({
+      headers: req.headers,
     });
 
-    const resultPosts = fetchedPosts.map((post) => ({
-      itemType: 'post' as const,
-      createdAt: post.createdAt,
-      post: toPostDto(post),
-    }));
+    if (!session?.user) {
+      throw new AppError('User needs to be logged in to access feed', 401);
+    }
+
+    req.session = session;
+
+    const viewerContext = session
+      ? await getViewerFeedContext(session.user.id)
+      : null;
+    const viewerId = session.user.id;
+
+    const candidatePosts = await db.query.post.findMany({
+      where: isNull(post.parentPostId),
+      with: postWithFeedRelations(),
+      orderBy: desc(post.createdAt),
+      limit: FOR_YOU_CANDIDATE_LIMIT,
+    });
+
+    const resultPosts = candidatePosts
+      .filter((post) => canViewPostInForYou(post, viewerId, viewerContext))
+      .map((post) => ({
+        itemType: 'post' as const,
+        createdAt: post.createdAt,
+        post: toPostDto(post),
+        score: scorePostForYou(post, viewerId, viewerContext),
+      }));
 
     const reposts = await db.query.repost.findMany({
       orderBy: desc(repost.createdAt),
+      limit: FOR_YOU_REPOST_CANDIDATE_LIMIT,
       with: {
         user: true,
         post: {
-          with: {
-            author: true,
-            likes: true,
-            media: true,
-            reposts: true,
-            quotePosts: true,
-            parentPost: { with: { author: true } },
-            quotedPost: {
-              with: {
-                author: true,
-                likes: true,
-                media: true,
-                comments: true,
-                reposts: true,
-                quotePosts: true,
-              },
-            },
-            comments: {
-              with: {
-                media: true,
-                likes: true,
-                author: true,
-              },
-            },
-          },
+          with: postWithFeedRelations(),
         },
       },
     });
 
-    const resultReposts = reposts.map((repost) => ({
-      itemType: 'repost' as const,
-      createdAt: repost.createdAt,
-      repostedBy: repost.user,
-      originalPost: toPostDto(repost.post),
-    }));
+    const resultReposts = reposts
+      .filter((repost) =>
+        canViewPostInForYou(repost.post, viewerId, viewerContext),
+      )
+      .map((repost) => ({
+        itemType: 'repost' as const,
+        createdAt: repost.createdAt,
+        repostedBy: repost.user,
+        originalPost: toPostDto(repost.post),
+        score: scorePostForYou(repost.post, viewerId, viewerContext),
+      }));
 
-    const result = [...resultPosts, ...resultReposts].sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-    );
+    const result = [...resultPosts, ...resultReposts]
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      })
+      .slice(0, FOR_YOU_RESULT_LIMIT)
+      .map(({ score, ...item }) => item);
 
     return res
       .status(200)

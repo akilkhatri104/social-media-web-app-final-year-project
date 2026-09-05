@@ -7,9 +7,10 @@ import { Textarea } from "~/components/ui/textarea";
 import { toast } from "sonner";
 import { queryClient, queryKeys } from "~/lib/react-query";
 import { useNavigate } from "react-router";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import axios from "axios";
 import { useDocumentTitle } from "~/lib/title";
+import { UserAvatar } from "~/components/UserAvatar";
+import { LoadingState } from "~/components/ui/spinner";
 
 export default function EditProfile() {
   useDocumentTitle("Edit Profile");
@@ -57,11 +58,14 @@ export default function EditProfile() {
       });
 
       toast.success("Profile updated successfully!");
-      queryClient.setQueryData(queryKeys.auth.me, res.data?.data?.user)
-      queryClient.setQueryData(queryKeys.users.byUsername(username), res.data?.data?.user)
+      const updatedUser = res.data?.data?.user;
+      queryClient.setQueryData(queryKeys.auth.me, updatedUser)
+      queryClient.setQueryData(queryKeys.users.byUsername(updatedUser?.username), updatedUser)
+      queryClient.setQueryData(queryKeys.users.byUsername(updatedUser?.displayUsername), updatedUser)
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
       queryClient.invalidateQueries({ queryKey: queryKeys.users.byUsername(user?.username) })
-      navigate(`/@${username}`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.byUsername(user?.displayUsername) })
+      navigate(`/@${updatedUser?.displayUsername ?? username}`);
     } catch (error) {
       toast.error(
         axios.isAxiosError(error)
@@ -74,7 +78,7 @@ export default function EditProfile() {
     }
   };
 
-  if (isLoading) return <p className="p-10 text-white">Loading...</p>;
+  if (isLoading) return <LoadingState label="Loading profile..." variant="page" />;
 
   return (
     <div className="max-w-xl mx-auto p-10 text-white space-y-6">
@@ -82,13 +86,13 @@ export default function EditProfile() {
 
       {/* Profile Picture */}
       <div className="flex flex-col items-center gap-3">
-        <Avatar
+        <UserAvatar
+          image={imagePreview}
+          name={name}
+          username={username}
           className="w-24 h-24 cursor-pointer"
           onClick={() => fileInputRef.current?.click()}
-        >
-          <AvatarImage src={imagePreview || undefined} />
-          <AvatarFallback>{name?.charAt(0)}</AvatarFallback>
-        </Avatar>
+        />
         <button
           onClick={() => fileInputRef.current?.click()}
           className="text-sm text-blue-400 hover:underline"

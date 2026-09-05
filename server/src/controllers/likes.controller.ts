@@ -1,13 +1,14 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../middlewares/errorHandler.ts';
 import { db } from '../lib/db/client.ts';
-import { like, post, notification } from '../lib/db/schema.ts';
+import { like, post } from '../lib/db/schema.ts';
 import { and, count, eq } from 'drizzle-orm';
 import { APIResponse } from '../lib/apiResponse.ts';
+import { createNotificationOnce } from '../lib/notifications.ts';
 
 export async function toggleLike(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to like a post', 401);
     }
 
@@ -64,8 +65,8 @@ export async function toggleLike(req: Request, res: Response) {
         columns: { userId: true },
       });
 
-      if (postOwner && postOwner.userId !== req.session.user.id) {
-        await db.insert(notification).values({
+      if (postOwner) {
+        await createNotificationOnce({
           recipientId: postOwner.userId,
           actorId: req.session.user.id,
           type: 'like',
@@ -117,9 +118,53 @@ export async function getLikesCountByPostId(req: Request, res: Response) {
   }
 }
 
+export async function getLikedPostsFromUser(req: Request, res: Response) {
+  try {
+    if (!req.params || !req.params['id']) {
+      throw new AppError('No user ID provided', 400);
+    }
+    const userId = req.params['id'];
+    if (!userId || typeof userId !== 'string') {
+      throw new AppError('Invalid user ID provided', 400);
+    }
+    const likedEntries = await db.query.like.findMany({
+      where: eq(like.userId, userId),
+      with: {
+        post: {
+          with: {
+            likes: true,
+            media: true,
+            author: true,
+            postHashtags: { with: { hashtag: true } },
+            comments: {
+              with: { media: true, likes: true, author: true, postHashtags: { with: { hashtag: true } } },
+            },
+          },
+        },
+      },
+    });
+    const likedPosts = likedEntries
+      .filter(likeItem => likeItem.post)
+      .map(({ post }) => ({
+        ...post,
+        likeCount: post.likes?.length ?? 0,
+        comments: post.comments?.map((comment) => ({
+          ...comment,
+          likeCount: comment.likes?.length ?? 0,
+        })) ?? [],
+      }));
+    return res
+      .status(200)
+      .json(new APIResponse('Liked posts fetched successfully', 200, likedPosts));
+  } catch (error) {
+    console.error('getLikedPostsFromUser :: ', error);
+    throw error instanceof AppError ? error : new AppError();
+  }
+}
+
 export async function getLikeStatusByPostId(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError(
         'User needs to be logged in to access their like status',
         401,

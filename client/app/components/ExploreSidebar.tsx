@@ -1,33 +1,35 @@
-import { useQuery } from "@tanstack/react-query"
-import { Link } from "react-router"
-import { SparklesIcon, TagIcon } from "lucide-react"
-import { Badge } from "~/components/ui/badge"
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router";
+import { SparklesIcon, TagIcon } from "lucide-react";
+import { Badge } from "~/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "~/components/ui/card"
-import { SearchBar } from "~/components/SearchBar"
-import { api } from "~/lib/axios"
-import type { APIResponse, TrendingHashtag } from "~/lib/types"
-import { queryKeys } from "~/lib/react-query"
+} from "~/components/ui/card";
+import { SearchBar } from "~/components/SearchBar";
+import { api } from "~/lib/axios";
+import type { APIResponse, TrendingHashtag } from "~/lib/types";
+import { queryKeys } from "~/lib/react-query";
+import { LoadingState } from "~/components/ui/spinner";
+import { QueryErrorState } from "~/components/QueryState";
 
 const suggestedSearches = [
   "Find trending conversations",
   "Discover student projects",
   "Browse communities by interest",
-]
+];
 
 export function ExploreSidebar() {
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError } = useQuery({
     queryKey: queryKeys.hashtags.trending,
     queryFn: async () => {
-      const res = await api.get<APIResponse>("/api/hashtags/trending")
-      return res.data.data as TrendingHashtag[]
+      const res = await api.get<APIResponse>("/api/hashtags/trending");
+      return res.data.data as TrendingHashtag[];
     },
-  })
+  });
 
   return (
     <aside className="hidden w-80 shrink-0 border-r border-border/80 bg-background/95 xl:block">
@@ -41,7 +43,7 @@ export function ExploreSidebar() {
             Search topics, people, and posts from here.
           </p>
           <div className="mt-4">
-            <SearchBar placeholder="Search people, posts, hashtags" />
+            <SearchBar placeholder="Search people, posts..." />
           </div>
         </div>
 
@@ -50,12 +52,15 @@ export function ExploreSidebar() {
             <CardHeader className="pb-0">
               <CardTitle>Trending hashtags</CardTitle>
               <CardDescription>
-                {data?.length ?? 0} tag{(data?.length ?? 0) === 1 ? "" : "s"} available
+                {data?.length ?? 0} tag{(data?.length ?? 0) === 1 ? "" : "s"}{" "}
+                available
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               {isPending ? (
-                <p className="text-sm text-muted-foreground">Loading tags...</p>
+                <LoadingState label="Loading tags..." variant="inline" />
+              ) : isError ? (
+                <QueryErrorState message="Failed to load trending hashtags." className="py-4" />
               ) : data && data.length > 0 ? (
                 data.map((tag, index) => (
                   <Link
@@ -82,7 +87,9 @@ export function ExploreSidebar() {
           <Card size="sm" className="gap-4">
             <CardHeader className="pb-0">
               <CardTitle>Suggested Searches</CardTitle>
-              <CardDescription>Quick starting points for discovery.</CardDescription>
+              <CardDescription>
+                Quick starting points for discovery.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               {suggestedSearches.map((item) => (
@@ -99,5 +106,5 @@ export function ExploreSidebar() {
         </div>
       </div>
     </aside>
-  )
+  );
 }

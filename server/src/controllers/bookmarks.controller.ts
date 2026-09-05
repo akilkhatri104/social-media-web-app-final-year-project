@@ -8,7 +8,7 @@ import { toPostDto } from '../lib/postDto.ts';
 
 export async function toggleBookmark(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError(
         'User needs to be logged in to toggle bookmarks.',
         401,
@@ -74,7 +74,7 @@ export async function toggleBookmark(req: Request, res: Response) {
 
 export async function getBookmarkStatus(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError(
         'User needs to be logged in to get bookmark status.',
         401,
@@ -106,7 +106,7 @@ export async function getBookmarkStatus(req: Request, res: Response) {
 
 export async function getMyBookmarks(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError(
         'User needs to be logged in to view bookmarks.',
         401,

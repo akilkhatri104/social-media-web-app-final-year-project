@@ -3,12 +3,13 @@ import { user } from '../lib/auth-schema.ts';
 import { db } from '../lib/db/client.ts';
 import { AppError } from '../middlewares/errorHandler.ts';
 import type { Request, Response } from 'express';
-import { follow, notification } from '../lib/db/schema.ts';
+import { follow } from '../lib/db/schema.ts';
 import { APIResponse } from '../lib/apiResponse.ts';
+import { createNotificationOnce } from '../lib/notifications.ts';
 
 export async function toggleFollow(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError('User needs to be logged in to follow user', 401);
     }
 
@@ -72,13 +73,11 @@ export async function toggleFollow(req: Request, res: Response) {
 
     // create notification for the followed user
     try {
-      if (followingId !== req.session.user.id) {
-        await db.insert(notification).values({
-          recipientId: followingId,
-          actorId: req.session.user.id,
-          type: 'follow',
-        });
-      }
+      await createNotificationOnce({
+        recipientId: followingId,
+        actorId: req.session.user.id,
+        type: 'follow',
+      });
     } catch (e) {
       console.error('follows.controller: notification creation failed', e);
     }
@@ -233,7 +232,7 @@ export async function getFollowingByUserId(req: Request, res: Response) {
 
 export async function getFollowStatusByUserId(req: Request, res: Response) {
   try {
-    if (!req.session) {
+    if (!req.session?.user) {
       throw new AppError(
         'User needs to be logged in to check follow status',
         401,

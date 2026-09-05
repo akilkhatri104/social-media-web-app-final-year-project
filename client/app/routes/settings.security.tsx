@@ -115,7 +115,7 @@ export default function SecuritySettings() {
   };
 
   // ── Sessions ─────────────────────────────────────────────────────
-  const { data: sessionsData, isLoading: sessionsLoading } = useQuery({
+  const { data: sessionsData, isLoading: sessionsLoading, isError: sessionsError } = useQuery({
     queryKey: queryKeys.settings.sessions,
     queryFn: async () => {
       const res = await api.get<APIResponse>("/api/settings/sessions");
@@ -220,6 +220,8 @@ export default function SecuritySettings() {
             Array.from({ length: 2 }).map((_, i) => (
               <Skeleton key={i} className="h-16 w-full rounded-xl" />
             ))
+          ) : sessionsError ? (
+            <p className="text-sm text-destructive">Failed to load sessions.</p>
           ) : sessions.length === 0 ? (
             <p className="text-sm text-muted-foreground">No active sessions found.</p>
           ) : (

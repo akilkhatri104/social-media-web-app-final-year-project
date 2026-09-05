@@ -1,5 +1,8 @@
 import express from 'express';
 import 'dotenv/config';
+import { validateEnvOrExit } from './lib/validateEnv.js';
+validateEnvOrExit();
+
 import cors from 'cors';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './lib/auth.js';
@@ -17,6 +20,7 @@ import messagesRouter from './routers/messages.router.js';
 import notificationsRouter from './routers/notifications.router.ts';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { noCache } from './middlewares/noCache.ts';
+import { authLimiter, feedLimiter, discoveryLimiter } from './middlewares/rateLimiter.ts';
 
 const app = express();
 app.set('etag', false);
@@ -32,7 +36,7 @@ app.use(
   }),
 );
 
-app.all('/api/auth/*splat', noCache, toNodeHandler(auth));
+app.all('/api/auth/*splat', noCache, authLimiter, toNodeHandler(auth));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -47,8 +51,8 @@ app.use('/api/users', userRouter);
 app.use('/api/posts', postRouter);
 app.use('/api/follow', followsRouter);
 app.use('/api/likes', likesRouter);
-app.use('/api/feed', feedRouter);
-app.use('/api/explore', exploreRouter);
+app.use('/api/feed', feedLimiter, feedRouter);
+app.use('/api/explore', discoveryLimiter, exploreRouter);
 app.use('/api/hashtags', hashtagsRouter);
 app.use('/api/repost', repostRouter);
 app.use('/api/bookmarks', bookmarksRouter);

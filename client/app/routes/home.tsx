@@ -2,7 +2,7 @@ import type { Route } from "./+types/home";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/axios";
 import type { APIResponse, FeedItem } from "~/lib/types";
-import { HomeIcon, Loader2 } from "lucide-react";
+import { HomeIcon } from "lucide-react";
 import PostCard from "~/components/PostCard";
 import { Separator } from "~/components/ui/separator";
 import { NavLink } from "react-router";
@@ -23,8 +23,9 @@ import ProtectedRoute from "~/components/ProtectedRoute";
 import { useEffect, useState } from "react";
 import { queryKeys } from "~/lib/react-query";
 import RepostFeedCard from "~/components/RepostFeedCard";
-import { Spinner } from "~/components/ui/spinner";
+import { LoadingState, Spinner } from "~/components/ui/spinner";
 import { useDocumentTitle } from "~/lib/title";
+import { safeSessionStorageGetItem, safeSessionStorageSetItem, STORAGE_KEYS, VALID_HOME_TABS } from "~/lib/storage";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -41,9 +42,9 @@ export default function Home() {
   useDocumentTitle(pageTitle);
 
   useEffect(() => {
-    const savedTab = sessionStorage.getItem("default-tab")
-    if (savedTab) {
-      setTab(savedTab)
+    const savedTab = safeSessionStorageGetItem(STORAGE_KEYS.HOME_TAB)
+    if (savedTab && VALID_HOME_TABS.includes(savedTab as typeof tab)) {
+      setTab(savedTab as typeof tab)
     }
     setMounted(true)
   }, [])
@@ -60,6 +61,9 @@ export default function Home() {
       return res.data.data as FeedItem[];
     },
     enabled: mounted,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    staleTime: 15_000, // 15 sec ensures the timeline/feed keeps updating for user
   });
 
 
@@ -67,9 +71,7 @@ export default function Home() {
 
   if (isPending) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Spinner />
-      </div>
+      <LoadingState label="Loading posts..." variant="page" />
     );
   }
 
@@ -89,8 +91,8 @@ export default function Home() {
         {/* Header Tabs */}
         <div className="sticky top-0 w-full bg-background/80 backdrop-blur-md border-b p-4 z-10">
           <Tabs value={tab} onValueChange={(value) => {
-            sessionStorage.setItem("default-tab", value)
-            setTab(value)
+            safeSessionStorageSetItem(STORAGE_KEYS.HOME_TAB, value)
+            setTab(value as typeof tab)
           }}>
             <TabsList className="w-full" variant="line">
               <TabsTrigger value="for-you">For You</TabsTrigger>
@@ -110,7 +112,7 @@ export default function Home() {
           {/* Refetch Loader */}
           {isFetching && !isPending && (
             <div className="flex justify-center py-4">
-              <Loader2 className="animate-spin w-5 h-5 text-primary" />
+              <Spinner className="size-5" />
             </div>
           )}
 
@@ -128,8 +130,14 @@ export default function Home() {
             </div>
           ) : (
             <div className="w-full">
-              {data?.map((item: FeedItem, index: number) => (
-                <div key={`${item.itemType}-${index}`}>
+              {data?.map((item: FeedItem) => (
+                <div
+                  key={
+                    item.itemType === "post"
+                      ? `post-${item.post.id}`
+                      : `repost-${item.originalPost.id}-${item.repostedBy?.id ?? item.createdAt}`
+                  }
+                >
                   {item.itemType === 'post' ? (
                     <PostCard post={item.post} />
                   ) : (

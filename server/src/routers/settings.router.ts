@@ -7,6 +7,8 @@ import {
   deleteOtherSessionsDirect,
   deleteAccount,
   changePassword,
+  getNotificationSettings,
+  updateNotificationSettings,
 } from '../controllers/settings.controller.ts';
 
 const router = Router();
@@ -18,5 +20,7 @@ router.delete('/sessions', deleteOtherSessionsDirect);
 router.delete('/sessions/:id', deleteSession);
 router.delete('/account', deleteAccount);
 router.post('/change-password', changePassword);
+router.get('/notifications', getNotificationSettings);
+router.patch('/notifications', updateNotificationSettings);
 
 export default router;

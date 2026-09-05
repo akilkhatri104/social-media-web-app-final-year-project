@@ -1,4 +1,3 @@
-import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { useFormStatus } from "react-dom"
 import { useNavigate } from "react-router"
@@ -11,6 +10,7 @@ import { api } from "~/lib/axios"
 import type { APIResponse } from "~/lib/types"
 import axios from "axios"
 import { queryClient, queryKeys } from "~/lib/react-query"
+import { LoadingState } from "./ui/spinner"
 
 type SubmitButtonProps = {
     idleLabel: string
@@ -79,7 +79,7 @@ export function VerifyEmailForm() {
     return (
         <div className="bg-card p-5 rounded-xl">
             {isInitialLoading ? (
-                <div className="flex flex-col items-center justify-center"><Loader2 className="animate-spin" /> Loading...</div>
+                <LoadingState label="Loading account..." variant="section" />
             ) : (
                 !emailSent ? (
                     <form action={handleSendEmail} className="flex flex-col gap-3">

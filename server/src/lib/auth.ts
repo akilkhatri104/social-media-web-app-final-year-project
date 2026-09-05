@@ -6,8 +6,9 @@ import { emailOTP, username } from 'better-auth/plugins';
 import mailSender from './mailSender.ts';
 import { AppError } from '../middlewares/errorHandler.ts';
 
-const frontendURL = process.env.FRONTEND_URL!;
-const backendURL = process.env.BACKEND_URL!;
+import { getEnv } from './validateEnv.js';
+const frontendURL = getEnv('FRONTEND_URL');
+const backendURL = getEnv('BACKEND_URL');
 const isSecureOrigin = frontendURL.startsWith('https://');
 
 export const auth = betterAuth({
@@ -34,6 +35,9 @@ export const auth = betterAuth({
       bio: {
         type: 'string',
       },
+    },
+    deleteUser: {
+      enabled: true,
     },
   },
   plugins: [

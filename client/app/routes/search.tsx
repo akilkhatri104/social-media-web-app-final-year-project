@@ -7,27 +7,18 @@ import { queryKeys } from "~/lib/react-query";
 import { useDocumentTitle } from "~/lib/title";
 import { Spinner } from "~/components/ui/spinner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import PostCard from "~/components/PostCard";
 import { SearchBar } from "~/components/SearchBar";
 import { Hash, Users, FileText } from "lucide-react";
+import { UserAvatar } from "~/components/UserAvatar";
 
 export function meta({}: Route.MetaArgs) {
   return [
     { title: "Search | PU Connect" },
     { name: "description", content: "Search posts, users, and hashtags" },
   ];
-}
-
-function UserAvatar({ name, image }: { name: string; image: string | null }) {
-  return (
-    <Avatar className="h-12 w-12">
-      <AvatarImage src={image ?? undefined} />
-      <AvatarFallback>{name.charAt(0)}</AvatarFallback>
-    </Avatar>
-  );
 }
 
 export default function SearchPage() {
@@ -114,7 +105,13 @@ export default function SearchPage() {
 
                   const content = (
                     <>
-                      <UserAvatar name={user.name} image={user.image} />
+                      <UserAvatar
+                        image={user.image}
+                        name={user.name}
+                        username={user.username}
+                        displayUsername={user.displayUsername}
+                        className="h-12 w-12"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="font-medium leading-none">{user.name}</p>
                         {handle && (

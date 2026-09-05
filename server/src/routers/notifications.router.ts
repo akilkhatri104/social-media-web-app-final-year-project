@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getNotifications,
+  getUnreadNotificationCount,
   markAsRead,
   markAllAsRead,
   deleteNotification,
@@ -10,6 +11,7 @@ import { verifyAuth } from '../middlewares/verifyAuth.ts';
 const router = Router();
 
 router.get('/', verifyAuth, getNotifications);
+router.get('/unread-count', verifyAuth, getUnreadNotificationCount);
 router.patch('/read/:id', verifyAuth, markAsRead);
 router.patch('/read-all', verifyAuth, markAllAsRead);
 router.delete('/:id', verifyAuth, deleteNotification);

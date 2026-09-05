@@ -1,6 +1,12 @@
 import { QueryClient } from "@tanstack/react-query";
 
-export const queryClient = new QueryClient();
+export const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            refetchOnWindowFocus: false,
+        },
+    },
+});
 
 export const queryKeys = {
     auth: {
@@ -34,6 +40,7 @@ export const queryKeys = {
     },
     notifications: {
         all: ["notifications"] as const,
+        unreadCount: ["notifications", "unread-count"] as const,
     },
     repost: {
         status: (id?: string | number) => ["repost", "status", id] as const,
@@ -44,5 +51,6 @@ export const queryKeys = {
     },
     settings: {
         sessions: ["settings", "sessions"] as const,
+        notifications: ["settings", "notifications"] as const,
     },
 };

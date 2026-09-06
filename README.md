@@ -1,54 +1,165 @@
 # Social Media Web Application for College Students
 
-A social media web application for college students and faculties to connect and socialize.
+A social media web application for college students and faculty to connect, communicate, and socialize.
 
 ## Features
 
-- **Authentication** – Sign up / sign in with username & email, email OTP verification, forgot/reset password, and secure session cookies via [Better Auth](https://better-auth.com)
+### Authentication
+- Sign up and sign in using username and email
+- Email OTP verification
+- Forgot/reset password
+- Secure session management using Better Auth
+- Risk-Adaptive Authentication based on login context
+
+### Risk-Adaptive Authentication
+The application evaluates authentication risk using contextual login signals:
+
+- Consecutive failed login attempts
+- New IP address
+- New device
+- Unusual login time
+
+Authentication is dynamically adapted based on the calculated risk level:
+
+| Risk Level | Authentication Requirement |
+| --- | --- |
+| **LOW** | Normal login |
+| **MEDIUM** | Email OTP verification |
+| **HIGH** | Additional security verification |
+
+For HIGH-risk authentication, users can configure a personal security question and answer from their security settings.
+
+Security questions have the following protections:
+
+- Answers are securely hashed using `scrypt`
+- Answers are never stored in plaintext
+- Changing a security question requires the user's current password
+- Users without a configured security question fall back to email OTP verification
+
+A Logistic Regression model is evaluated in shadow mode alongside the rule-based system and does not currently control authentication decisions.
+
+### Social Features
 - **Feed** – Home timeline of posts from people you follow
-- **Posts** – Create text posts with image/video upload, edit, and delete
+- **Posts** – Create text posts with image/video uploads, edit, and delete
 - **Engagement** – Like, comment, repost, quote-post, and bookmark posts
-- **Follow system** – Follow/unfollow users and see follower/following counts
-- **Profiles** – Public user profiles (`/@username`) with bio and avatar
-- **Explore & Discovery** – Explore tab with trending posts, hashtag pages, and discoverable content
-- **Search** – Search for users, posts, and hashtags
-- **Hashtags** – Auto-linking and dedicated hashtag feeds
-- **Notifications** – In-app notifications with per-type preferences plus optional email notifications
-- **Messaging** – Direct messages between users
-- **Settings** – Account, security, and notification preferences
-- **Dark mode** – Light/dark theme toggle
-- **Responsive UI** – Built with Tailwind CSS and shadcn/ui components
+- **Follow System** – Follow/unfollow users and view follower/following counts
+- **Profiles** – Public user profiles with bio and avatar
+- **Explore & Discovery** – Trending posts, hashtag pages, and discoverable content
+- **Search** – Search users, posts, and hashtags
+- **Hashtags** – Automatic hashtag linking and dedicated hashtag feeds
+- **Notifications** – In-app notifications with per-type preferences and optional email notifications
+- **Messaging** – Direct messaging between users
+
+### User Experience
+- **Settings** – Account, security, notification preferences, and security question management
+- **Dark Mode** – Light/dark theme toggle
+- **Responsive UI** – Tailwind CSS and shadcn/ui components
 
 ## Tech Stack
 
-### Client (`client/`)
+### Client
 
-- **React 19** with **React Router 7** (framework mode, SSR + HMR)
+Located in `client/`.
+
+- **React 19**
+- **React Router 7**
 - **TypeScript**
-- **Vite 7** build tooling
-- **Tailwind CSS 4** + **shadcn/ui** (Radix UI / Base UI)
-- **TanStack React Query** for server state
-- **Axios** for API calls
-- **react-hook-form** + **zod** for forms and validation
-- **sonner** for toasts, **next-themes** for theming, **lucide-react** for icons
-- **Vitest** + **Testing Library** for tests
+- **Vite 7**
+- **Tailwind CSS 4**
+- **shadcn/ui**
+- **TanStack React Query**
+- **Axios**
+- **react-hook-form** + **zod**
+- **sonner**
+- **next-themes**
+- **lucide-react**
+- **Vitest** + **Testing Library**
 
-### Server (`server/`)
+### Server
 
-- **Node.js** with **Express 5**
-- **TypeScript** (run with `tsx`, compiled with `tsc`)
-- **Better Auth** for authentication (username + email OTP plugins, Drizzle adapter)
-- **Drizzle ORM** + **drizzle-kit** for schema and migrations
-- **Neon** (Postgres, serverless driver)
-- **Cloudinary** for media storage and thumbnail generation
-- **Multer** for file uploads
-- **Nodemailer** for transactional/notification emails
-- **express-rate-limit** for API rate limiting
-- **Jest** + **Supertest** for tests
+Located in `server/`.
+
+- **Node.js**
+- **Express 5**
+- **TypeScript**
+- **Better Auth**
+- **Drizzle ORM**
+- **drizzle-kit**
+- **Neon Serverless PostgreSQL**
+- **Cloudinary**
+- **Multer**
+- **Nodemailer**
+- **express-rate-limit**
+- **Jest** + **Supertest**
+
+### Risk-Adaptive Authentication / ML
+
+- **Python**
+- **scikit-learn**
+- **Logistic Regression**
+- **Decision Tree**
+- **JSON model artifact**
+- **Synthetic authentication dataset**
+
+## Authentication Risk Assessment
+
+The RAA prototype combines authentication context signals to calculate a risk level.
+
+### Rule-Based Assessment
+
+The current authentication decision is controlled by the rule-based risk assessment.
+
+Signals include:
+
+- Failed login attempts
+- IP address changes
+- Device changes
+- Login time anomalies
+
+The resulting risk level determines the authentication step required.
+
+### ML Evaluation
+
+A synthetic dataset containing **150 authentication events** was used to compare the rule-based approach with two machine-learning models.
+
+| Approach | Accuracy |
+| --- | ---: |
+| Logistic Regression | 0.684 |
+| Decision Tree | 0.605 |
+| Rule-Based | 0.607 |
+
+The Logistic Regression model currently operates in **shadow mode**. It is evaluated against the rule-based approach but does not control authentication decisions.
+
+The dataset is synthetic and is intended for prototype and research evaluation rather than production security validation.
+
+## Database
+
+The application uses PostgreSQL through Neon and Drizzle ORM.
+
+### `auth_risk_event`
+
+Stores authentication risk events including:
+
+- Authentication risk signals
+- Risk scores
+- Risk levels
+- Authentication outcomes
+
+### `security_question`
+
+Stores user-configured security questions and securely hashed answers.
+
+The answer is stored using:
+
+- `scrypt` password hashing
+- Random per-user salt
+- Timing-safe hash comparison during verification
 
 ## Documentation
 
-- **Architecture & feature implementation details** – see [TECHNICAL.md](./TECHNICAL.md)
+- **Architecture and implementation details** – [TECHNICAL.md](./TECHNICAL.md)
+- **Project roadmap** – [ROADMAP.md](./ROADMAP.md)
+- **Development tasks** – [TODO.md](./TODO.md)
 
 ## Run Locally
 
@@ -56,31 +167,34 @@ A social media web application for college students and faculties to connect and
 
 - Node.js 20+
 - npm
-- A Postgres database (e.g. [Neon](https://neon.tech))
-- A [Cloudinary](https://cloudinary.com) account
-- An SMTP provider (e.g. Brevo, Mailtrap)
+- Python 3+
+- PostgreSQL database, such as Neon
+- Cloudinary account
+- SMTP provider such as Brevo or Mailtrap
 
-### 1. Clone and install
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/akilkhatri104/social-media-web-app-final-year-project
 cd social-media-web-app-final-year-project
 ```
 
-### 2. Server
+### 2. Set up the server
 
 ```bash
 cd server
 npm install
 ```
 
-Copy `.env.sample` to `.env` and fill in the required values (see [Environment Variables](#environment-variables)):
+Copy the environment template:
 
 ```bash
 cp .env.sample .env
 ```
 
-Create the database tables based on `server/src/lib/db/schema.ts` and `server/src/lib/auth-schema.ts`:
+Configure the required environment variables.
+
+Create/update the database schema:
 
 ```bash
 npm run db:push
@@ -92,22 +206,28 @@ Start the development server:
 npm run dev
 ```
 
-The server will run at `http://localhost:8000`.
+The server runs at:
 
-### 3. Client
+```text
+http://localhost:8000
+```
 
-In a new terminal:
+### 3. Set up the client
+
+Open a new terminal:
 
 ```bash
 cd client
 npm install
 ```
 
-Copy `.env.sample` to `.env` and set the values:
+Copy the environment template:
 
 ```bash
 cp .env.sample .env
 ```
+
+Configure the required environment variables.
 
 Start the development server:
 
@@ -115,7 +235,11 @@ Start the development server:
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`.
+The application runs at:
+
+```text
+http://localhost:5173
+```
 
 ## Building for Production
 
@@ -150,6 +274,19 @@ cd server
 npm run test
 ```
 
+### Risk-Adaptive Authentication
+
+The RAA implementation has been tested across:
+
+- LOW-risk authentication
+- MEDIUM-risk authentication with email OTP
+- HIGH-risk authentication with security challenge
+- Incorrect security answers
+- Users without configured security questions
+- Security question creation
+- Security question persistence after reload
+- Security question changes requiring the current password
+
 ## Linting
 
 ```bash
@@ -159,7 +296,7 @@ npm run lint
 
 ## Database Migrations
 
-Generate a migration after schema changes:
+Generate a migration after making schema changes:
 
 ```bash
 npm run db:generate
@@ -171,7 +308,7 @@ Apply migrations:
 npm run db:migrate
 ```
 
-Regenerate the Better Auth schema after auth changes:
+Regenerate the Better Auth schema after authentication schema changes:
 
 ```bash
 npm run db:generate-auth
@@ -179,46 +316,52 @@ npm run db:generate-auth
 
 ## Environment Variables
 
-To run this project, you will need to add the following environment variables to your `.env` files.
+The application requires environment variables for the client and server.
 
 ### `client/.env`
 
-`VITE_BACKEND_URL` : URL of the backend
+`VITE_BACKEND_URL` – URL of the backend.
 
-`VITE_FRONTEND_URL` : URL of the frontend
+`VITE_FRONTEND_URL` – URL of the frontend.
 
 For Vercel deployments, leave `VITE_BACKEND_URL` unset so the client uses same-origin `/api/*` requests and Vercel rewrites them to the backend.
 
 ### `server/.env`
 
-`PORT` : Port at which the server will run on localhost (default `8000`)
+`PORT` – Port at which the server runs locally. Default: `8000`.
 
-`FRONTEND_URL` : Base URL of your frontend
+`FRONTEND_URL` – Base URL of the frontend.
 
-Set this to the exact production Vercel URL used by users, with no trailing slash.
+Set this to the exact production Vercel URL used by users, without a trailing slash.
 
-`BACKEND_URL` : Base URL of your backend
+`BACKEND_URL` – Base URL of the backend.
 
-Set this to the exact DigitalOcean API origin, with no trailing slash.
+Set this to the exact DigitalOcean API origin, without a trailing slash.
 
-`DATABASE_URL` : Connection string for the Postgres database
+`DATABASE_URL` – PostgreSQL database connection string.
 
-`BETTER_AUTH_SECRET` : A secret value used for encryption and hashing. It must be at least 32 characters and generated with high entropy. Generate one with `openssl rand -base64 32`.
+`BETTER_AUTH_SECRET` – Secret used by Better Auth for encryption and hashing. It must be at least 32 characters and generated with high entropy.
 
-`CLOUDINARY_CLOUD_NAME` : Cloud name from your Cloudinary environment
+Example:
 
-`CLOUDINARY_API_KEY` : API key for your Cloudinary environment
+```bash
+openssl rand -base64 32
+```
 
-`CLOUDINARY_API_SECRET` : API Secret for your Cloudinary API key
+`CLOUDINARY_CLOUD_NAME` – Cloudinary cloud name.
 
-`SMTP_HOST` : Host URL of your SMTP service (e.g. Brevo, Mailtrap)
+`CLOUDINARY_API_KEY` – Cloudinary API key.
 
-`SMTP_PORT` : SMTP port of the service (e.g. 587)
+`CLOUDINARY_API_SECRET` – Cloudinary API secret.
 
-`SMTP_USERNAME` : Username of the SMTP service
+`SMTP_HOST` – SMTP service host.
 
-`SMTP_PASSWORD` : Password for the SMTP service
+`SMTP_PORT` – SMTP service port, such as `587`.
 
-`SMTP_FROM_NAME` : Name of the sender
+`SMTP_USERNAME` – SMTP service username.
 
-`SMTP_FROM_EMAIL` : Email of the SMTP sender
+`SMTP_PASSWORD` – SMTP service password.
+
+`SMTP_FROM_NAME` – Sender display name.
+
+`SMTP_FROM_EMAIL` – Sender email address.

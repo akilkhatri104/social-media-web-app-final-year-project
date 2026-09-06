@@ -2,6 +2,7 @@ import type { NextFunction, Response, Request } from 'express';
 import { auth } from '../lib/auth.ts';
 import type { Session, User } from 'better-auth';
 import { AppError } from './errorHandler.ts';
+import { isPendingMFA } from '../lib/pendingMFA.ts';
 
 declare module 'express-serve-static-core' {
   export interface Request {
@@ -29,6 +30,11 @@ export async function verifyAuth(
         401,
       );
     }
+
+    if (isPendingMFA(session.session.id)) {
+      throw new AppError('MFA verification required', 401);
+    }
+
     req.session = session;
     next();
   } catch (error) {

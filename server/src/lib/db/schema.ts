@@ -149,7 +149,7 @@ export const follow = p.pgTable(
   (t) => [p.unique().on(t.followerId, t.followingId)],
 );
 
-// 1. Post Relations (Connects posts to media, likes, and itself for comments)
+// Post Relations
 export const postRelations = relations(post, ({ one, many }) => ({
   media: many(media),
   likes: many(like),
@@ -215,7 +215,6 @@ export const bookmarkRelations = relations(bookmark, ({ one }) => ({
   }),
 }));
 
-// 2. Media Relations
 export const mediaRelations = relations(media, ({ one }) => ({
   post: one(post, {
     fields: [media.postId],
@@ -223,7 +222,6 @@ export const mediaRelations = relations(media, ({ one }) => ({
   }),
 }));
 
-// 3. Like Relations
 export const likeRelations = relations(like, ({ one }) => ({
   post: one(post, {
     fields: [like.postId],
@@ -279,10 +277,12 @@ export const notification = p.pgTable('notification', {
     .text('actor_id')
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
-  type: p
-    .text('type', { enum: ['like', 'comment', 'repost', 'follow', 'quote', 'mention'] })
-    .notNull(),
-  postId: p.integer('post_id').references(() => post.id, { onDelete: 'set null' }),
+  type: p.text('type', {
+    enum: ['like', 'comment', 'repost', 'follow', 'quote', 'mention'],
+  }).notNull(),
+  postId: p
+    .integer('post_id')
+    .references(() => post.id, { onDelete: 'set null' }),
   readAt: p.timestamp('read_at'),
   createdAt: p.timestamp('created_at').defaultNow().notNull(),
   updatedAt: p
@@ -291,45 +291,51 @@ export const notification = p.pgTable('notification', {
     .notNull(),
 });
 
-export const notificationPreference = p.pgTable('notification_preference', {
-  userId: p
-    .text('user_id')
-    .primaryKey()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  inAppLikes: p.boolean('in_app_likes').notNull().default(true),
-  inAppComments: p.boolean('in_app_comments').notNull().default(true),
-  inAppReposts: p.boolean('in_app_reposts').notNull().default(true),
-  inAppFollows: p.boolean('in_app_follows').notNull().default(true),
-  inAppQuotes: p.boolean('in_app_quotes').notNull().default(true),
-  inAppMentions: p.boolean('in_app_mentions').notNull().default(true),
-  emailEnabled: p.boolean('email_enabled').notNull().default(true),
-  emailLikes: p.boolean('email_likes').notNull().default(false),
-  emailComments: p.boolean('email_comments').notNull().default(true),
-  emailReposts: p.boolean('email_reposts').notNull().default(false),
-  emailFollows: p.boolean('email_follows').notNull().default(true),
-  emailQuotes: p.boolean('email_quotes').notNull().default(true),
-  emailMentions: p.boolean('email_mentions').notNull().default(true),
-  createdAt: p.timestamp('created_at').defaultNow().notNull(),
-  updatedAt: p
-    .timestamp('updated_at')
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});
+export const notificationPreference = p.pgTable(
+  'notification_preference',
+  {
+    userId: p
+      .text('user_id')
+      .primaryKey()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    inAppLikes: p.boolean('in_app_likes').notNull().default(true),
+    inAppComments: p.boolean('in_app_comments').notNull().default(true),
+    inAppReposts: p.boolean('in_app_reposts').notNull().default(true),
+    inAppFollows: p.boolean('in_app_follows').notNull().default(true),
+    inAppQuotes: p.boolean('in_app_quotes').notNull().default(true),
+    inAppMentions: p.boolean('in_app_mentions').notNull().default(true),
+    emailEnabled: p.boolean('email_enabled').notNull().default(true),
+    emailLikes: p.boolean('email_likes').notNull().default(false),
+    emailComments: p.boolean('email_comments').notNull().default(true),
+    emailReposts: p.boolean('email_reposts').notNull().default(false),
+    emailFollows: p.boolean('email_follows').notNull().default(true),
+    emailQuotes: p.boolean('email_quotes').notNull().default(true),
+    emailMentions: p.boolean('email_mentions').notNull().default(true),
+    createdAt: p.timestamp('created_at').defaultNow().notNull(),
+    updatedAt: p
+      .timestamp('updated_at')
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+);
 
-export const notificationRelations = relations(notification, ({ one }) => ({
-  recipient: one(user, {
-    fields: [notification.recipientId],
-    references: [user.id],
+export const notificationRelations = relations(
+  notification,
+  ({ one }) => ({
+    recipient: one(user, {
+      fields: [notification.recipientId],
+      references: [user.id],
+    }),
+    actor: one(user, {
+      fields: [notification.actorId],
+      references: [user.id],
+    }),
+    post: one(post, {
+      fields: [notification.postId],
+      references: [post.id],
+    }),
   }),
-  actor: one(user, {
-    fields: [notification.actorId],
-    references: [user.id],
-  }),
-  post: one(post, {
-    fields: [notification.postId],
-    references: [post.id],
-  }),
-}));
+);
 
 export const notificationPreferenceRelations = relations(
   notificationPreference,
@@ -341,3 +347,63 @@ export const notificationPreferenceRelations = relations(
   }),
 );
 
+export const authRiskEvent = p.pgTable('auth_risk_event', {
+  id: p.serial('id').primaryKey(),
+
+  userId: p
+    .text('user_id')
+    .references(() => user.id, { onDelete: 'cascade' }),
+
+  ipAddress: p.text('ip_address'),
+  userAgent: p.text('user_agent'),
+
+  success: p.boolean('success').notNull(),
+
+  failedAttempts: p.integer('failed_attempts').notNull().default(0),
+  newIp: p.boolean('new_ip').notNull().default(false),
+  newDevice: p.boolean('new_device').notNull().default(false),
+  unusualLoginTime: p
+    .boolean('unusual_login_time')
+    .notNull()
+    .default(false),
+
+  riskScore: p.integer('risk_score').notNull(),
+  riskLevel: p
+    .text('risk_level', { enum: ['LOW', 'MEDIUM', 'HIGH'] })
+    .notNull(),
+
+  createdAt: p.timestamp('created_at').defaultNow().notNull(),
+});
+
+export const securityQuestion = p.pgTable('security_question', {
+  id: p.serial('id').primaryKey(),
+
+  userId: p
+    .text('user_id')
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: 'cascade' }),
+
+  question: p.text('question').notNull(),
+
+  answerHash: p.text('answer_hash').notNull(),
+
+  answerSalt: p.text('answer_salt').notNull(),
+
+  createdAt: p.timestamp('created_at').defaultNow().notNull(),
+
+  updatedAt: p
+    .timestamp('updated_at')
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const securityQuestionRelations = relations(
+  securityQuestion,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [securityQuestion.userId],
+      references: [user.id],
+    }),
+  }),
+);

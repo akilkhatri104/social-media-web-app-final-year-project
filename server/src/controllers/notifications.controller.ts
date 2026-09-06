@@ -76,11 +76,16 @@ export async function markAsRead(req: Request, res: Response) {
       throw new AppError('No or invalid notification id provided', 400);
     }
 
-    const updated = await db
-      .update(notification)
-      .set({ readAt: new Date() })
-      .where(and(eq(notification.id, id), eq(notification.recipientId, req.session.user.id)))
-      .returning({ id: notification.id });
+  const updated = await db
+  .update(notification)
+  .set({ readAt: new Date() })
+  .where(
+    and(
+      eq(notification.id, id),
+      eq(notification.recipientId, req.session.user.id),
+    ),
+  )
+  .returning({ id: notification.id });
 
     if (updated.length === 0) {
       throw new AppError('Notification not found', 404);

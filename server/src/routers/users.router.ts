@@ -11,6 +11,10 @@ import {
   verifyForgetPasswordOTP,
   getUserByUsername,
   searchUsers,
+  verifySigninOTP,
+  verifySecurityChallenge,
+  getSecurityQuestion,
+  setSecurityQuestion,
 } from '../controllers/users.controller.js';
 import { verifyAuth } from '../middlewares/verifyAuth.ts';
 import { noCache } from '../middlewares/noCache.ts';
@@ -22,12 +26,40 @@ const publicRouter = Router();
 const protectedRouter = Router();
 
 protectedRouter.use(noCache);
+
 protectedRouter.use(verifyAuth);
 
+protectedRouter.get('/security-question', getSecurityQuestion);
+
+protectedRouter.post('/security-question', setSecurityQuestion);
+
 publicRouter.post('/signin', authLimiter, signin);
-publicRouter.post('/signup', authLimiter, upload.single('image'), signup);
-publicRouter.post('/forget-password/send', authLimiter, sendForgetPasswordOTP);
-publicRouter.post('/forget-password/verify', authLimiter, verifyForgetPasswordOTP);
+
+publicRouter.post('/signin/verify-otp', verifySigninOTP);
+
+publicRouter.post(
+  '/signin/verify-security',
+  verifySecurityChallenge,
+);
+
+publicRouter.post(
+  '/signup',
+  authLimiter,
+  upload.single('image'),
+  signup,
+);
+
+publicRouter.post(
+  '/forget-password/send',
+  authLimiter,
+  sendForgetPasswordOTP,
+);
+
+publicRouter.post(
+  '/forget-password/verify',
+  authLimiter,
+  verifyForgetPasswordOTP,
+);
 
 protectedRouter.get('/search', searchUsers);
 protectedRouter.get('/me', me);

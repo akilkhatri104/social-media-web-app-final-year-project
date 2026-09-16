@@ -92,6 +92,7 @@ export const STORAGE_KEYS = {
   THEME: "vite-ui-theme",
   HOME_TAB: "default-tab",
   EMAIL_VERIFY_DISMISSED: "email-verify-prompt-dismissed",
+  SECURITY_QUESTION_DISMISSED: "security-question-prompt-dismissed",
   CROSS_TAB_LOGOUT: "__cross_tab_logout__",
 } as const;
 

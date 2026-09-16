@@ -285,7 +285,7 @@ const handleSaveSecurityQuestion = () => {
       </Card>
 
 {/* ── Security Question ── */}
-<Card>
+<Card id="security-question" className="scroll-mt-20">
   <CardHeader>
     <CardTitle className="text-base">Security Question</CardTitle>
   </CardHeader>
